@@ -5,19 +5,12 @@ Your VRChat matchmaking world implementation is **complete and production-ready*
 
 ## Prerequisites
 - Unity 2022.3.6f1 LTS
-- VRChat Creator Companion (VCC)
+
 - VRChat Worlds SDK 3.5.0+
 - UdonSharp 1.1.8+
 
 ## Step 1: Unity Project Setup
 
-### 1.1 Create VRChat World Project
-```bash
-1. Open VRChat Creator Companion
-2. Create New Project → "VRChat Worlds"
-3. Project Name: "VirtualTokyoMatching"
-4. Unity Version: 2022.3.6f1 LTS
-```
 
 ### 1.2 Install Dependencies
 ```bash
