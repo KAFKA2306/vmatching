@@ -1,0 +1,97 @@
+{
+  "testConfiguration": {
+    "projectName": "Virtual Tokyo Matching",
+    "testFramework": "Unity Test Runner",
+    "vrchatSDK": "SDK3 Worlds",
+    "udonVersion": "UdonSharp 1.1.x",
+    "unityVersion": "2022.3 LTS"
+  },
+  "multiClientTesting": {
+    "enableMultiClient": true,
+    "maxConcurrentClients": 4,
+    "testUsers": [
+      {
+        "userID": "test_user_001",
+        "displayName": "TestUser1",
+        "platform": "PC",
+        "targetFPS": 72
+      },
+      {
+        "userID": "test_user_002", 
+        "displayName": "TestUser2",
+        "platform": "PC",
+        "targetFPS": 72
+      },
+      {
+        "userID": "test_user_003",
+        "displayName": "TestUser3",
+        "platform": "Quest",
+        "targetFPS": 60
+      },
+      {
+        "userID": "test_user_004",
+        "displayName": "TestUser4", 
+        "platform": "Quest",
+        "targetFPS": 60
+      }
+    ]
+  },
+  "performanceTargets": {
+    "PC": {
+      "minFPS": 72,
+      "maxWorldSize": "200MB",
+      "maxFullRecalculationTime": "5s"
+    },
+    "Quest": {
+      "minFPS": 60,
+      "maxWorldSize": "100MB", 
+      "maxFullRecalculationTime": "10s"
+    }
+  },
+  "testScenarios": {
+    "dataStorage": {
+      "playerDataPersistence": true,
+      "crossSessionRecovery": true,
+      "incrementalSaves": true,
+      "retryMechanism": true
+    },
+    "progressiveMatching": {
+      "partialQuestionnaireMatching": true,
+      "provisionalVectorUpdates": true,
+      "compatibilityRecalculation": true,
+      "recommendationListUpdates": true
+    },
+    "synchronization": {
+      "publicProfileBroadcasting": true,
+      "lateJoinerSupport": true,
+      "visibilityToggling": true,
+      "6DCompressionValidation": true
+    },
+    "performance": {
+      "frameRateMaintenance": true,
+      "calculationBudgetManagement": true,
+      "distributedProcessing": true,
+      "adaptiveThrottling": true
+    },
+    "userFlow": {
+      "assessmentResume": true,
+      "oneOnOneRoomCreation": true,
+      "sessionTimers": true,
+      "feedbackRecording": true
+    }
+  },
+  "testData": {
+    "questionnaireSize": 112,
+    "vector30DSize": 30,
+    "vector6DSize": 6,
+    "maxAnswerValue": 5,
+    "minAnswerValue": 1,
+    "unansweredValue": 0
+  },
+  "automatedTesting": {
+    "enableContinuousIntegration": true,
+    "runOnCommit": false,
+    "runNightly": true,
+    "reportFormat": "JUnit"
+  }
+}
