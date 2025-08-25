@@ -1,117 +1,74 @@
-プロジェクト概要
-バーチャル東京マッチングは、自動性格分析を利用したマッチング用のUnityHubベースVRChatワールドです。Unity 2022 LTS + VCC、SDK3 Worlds、およびUdonSharpを使用して構築されています。
+# Virtual Tokyo Matching – VRChat World
 
-基本アーキテクチャ
-本システムは外部API/データベースに依存しないスタンドアロン型のVRChatワールドであり、段階的なマッチングを実現しています。ユーザーが質問票を完全回答していなくても推薦結果を表示できる点が特徴です。主要コンポーネントは以下の通りです：
+## 概要
+Virtual Tokyo Matching は、112問の性格診断を基盤に、回答途中からでも暫定ベクトルで推薦が進む「即時対話到達」型のマッチング体験を提供するVRChatワールド実装である。診断は30軸ベクトルに集約し、公開時は6軸縮約＋タグ／見出しのみを同期するプライバシー設計を採用している。[3][4][1]
 
-PlayerDataManager: 各ユーザーの永続データを管理します（質問1～112、30次元ベクトル、フラグ情報）
-診断コントローラ: 112問の性格診断アンケートを管理し、自動保存/再開機能を備えています
-VectorBuilder: 各回答ごとにベクトルを段階的に更新します。途中回答時には暫定ベクトルを使用し、回答完了時に最終的な正規化を行います
-PublicProfilePublisher: 公開状態の切り替え管理、6次元に圧縮したデータを進捗インジケーターと暫定フラグ付きでブロードキャストします
-相性計算処理: イベント駆動型のコサイン類似度計算を実装。回答更新時にはキューに登録され、再計算が順次実行されます。
-RecommenderUI: 暫定バッジと進捗率を表示しながら、上位3件の相性マッチング結果を表示します
-SessionRoomManager: 1対1のプライベートルームへの転送処理と15分間のタイマー管理を担当
-ValuesSummaryGenerator: ベクトルデータから性格特性サマリーを生成します（手動によるプロフィール設定は不要）
-PerfGuard: フレーム制限付き分散処理と、段階的な再計算トリガー機能
-データ設計
-PlayerData（非公開、ユーザーごと）
-diag_q_001 から diag_q_112: int型（0～5、0は未回答状態）
-vv_0～vv_29: float型（-1.0～+1.0） - 回答中は暫定値を表示し、回答完了後に正規化されます
-flags: int型（ビットフィールド：公開状態 ON=1、暫定公開許可=2など）
-act_last_active: int型（アクティビティのタイムスタンプ）
-公開同期データ（ユーザーが許可した場合、暫定データを含む）
-red_0 から red_5: float型（固定投影行列 P による6次元圧縮ベクトル）
-tags: 文字列（自動生成される性格タグ）
-headline: 文字列（自動生成される要約テキスト）
-display_name: 文字列（自由記述形式のプロフィールは許可されません）
-partial_flag: bool型（暫定データ/不完全データであることを示すフラグ）
-progress: int型（0～112）、または progress_pct: float型（0～1）で進捗率を表示
-主な制約事項
-パフォーマンス: PC ≥72FPS、Quest ≥60FPS、データサイズ PC<200MB/Quest<100MB
-プライバシー保護: 回答内容や30次元ベクトルは他者に一切公開されず、6次元に圧縮されたデータのみが共有されます
-外部依存なし：すべての機能はVRChatワールドの制約内で動作する必要があります
-手動プロフィールの禁止: 性格データはすべて質問票の回答から自動生成されます
-セッション限定画像: アクティブなセッション中のみ表示されるアバターのスナップショットで、保存はされません
-段階的マッチングシステム
-主な革新点: ユーザーは質問票が不完全な状態でも、おすすめの提案を確認でき、会話を開始することが可能です。
+## 主な特徴
+- 112問・5択の進捗再開対応診断、回答確定ごとの自動保存と暫定ベクトル更新により、途中でも推薦と1on1導線へ進める。[4][1]
+- 30D→6D縮約を前提にコサイン類似度で上位3件を算出し、イベント駆動かつPerfGuardでフレーム負荷を抑えた分散計算を行う。[1][3]
+- 公開は同意ベースで6軸縮約＋タグ/見出しのみ、緊急非表示・即時非公開・データリセットなどの安全UIを完備する。[4][1]
 
-ベクトルの段階的更新: 各回答が即座に暫定的な30次元ベクトルを更新します（未回答項目はゼロで初期化）
-イベント駆動型再計算: 回答確認が行われると、影響を受けるすべてのユーザーに対して互換性の再計算がキューに追加されます
-暫定的なUI表示: おすすめカードには「暫定」バッジと進捗率が表示されます
-回答の信頼性に応じた重み付け：初期の回答ほど重みが高く、暫定ベクトルのコサイン類似度におけるノルムは自然に小さくなります
-パフォーマンスアーキテクチャ
-フレーム予算: 分散処理を考慮した1フレームあたりK回の演算制限
-漸進的更新方式: ベクトルが変更された場合にのみ相性を再計算します（回答イベント、ユーザーの参加/離脱、表示切り替え時など）
-6次元圧縮処理: 公開マッチングでは圧縮ベクトルを使用します（30次元→6次元への固定射影行列Pによる変換）
-メモリ制約: PC版は200MB未満、Quest版はワールド全体のサイズが100MB未満
-実装状況（Implementation Status）
-プロジェクトは設計完了・実装段階にあります：
+## アーキテクチャ
+- コア構成: PlayerDataManager／DiagnosisController／VectorBuilder／PublicProfilePublisher／CompatibilityCalculator／RecommenderUI／SessionRoomManager／ValuesSummaryGenerator／PerfGuard／SafetyController でイベント駆動連携する。[3][1]
+- データ流: 回答→30D→6D→類似度→上位カード→1on1へ遷移し、保存は自分のPlayerDataのみ、公開同期は縮約データのみに限定する。[1][3]
 
-✅ 主要スクリプト: 9/9完了 - 主要コンポーネントすべて実装済み
-❌ Unityプロジェクト: 初期化されていません（VCCのセットアップが必要です）
-❌ 3Dシーン: UIプレハブとワールドジオメトリが未実装
-✅ アーキテクチャ: イベント駆動型で分散処理対応済み
-実装済みコンポーネント
-PlayerDataManager: PlayerData永続化・復元・リトライ機構
-診断コントローラ: 112問のUI・中断/再開・自動進行機能
-VectorBuilder: 30D暫定ベクトル・増分更新・正規化
-PublicProfilePublisher: 30日間→6日間へのデータ縮約・同期配布・公開制御
-CompatibilityCalculator: コサイン類似度の計算、分散分析、上位3件の選出
-PerfGuard: FPS監視・計算予算管理・適応的スロットリング
-RecommenderUI: 推薦カード・詳細UI・暫定バッジ・招待機能
-SessionRoomManager: 1on1個室管理・招待システム・15分タイマー
-ValuesSummaryGenerator: 30Dから自動要約生成
-開発ワークフロー
-開発は Unity 2022 LTS + VCC + SDK3 Worlds + UdonSharp 構成で進めます：
+## 前提環境
+- OS: Ubuntu 22.04 LTS（実用運用例、GUIのVCCはWindows正式対応、LinuxはVPM CLI運用が現実解）。[2][4]
+- Unity: 2022.3 LTS 系（Hub管理推奨、プロジェクトはSDK互換版を前提）。[5][4]
+- パッケージ: VRChat SDK3 Worlds、UdonSharp、ClientSim（VPMで導入）。[6][2]
+- VPM CLI: .NET 8 SDKが必要、vpm new/add/resolve等でプロジェクト管理・依存解決を実施する。[7][2]
 
-必須セットアップ手順
-VCC Setup: VRChat Creator Companion で SDK3 Worlds プロジェクト作成
-UdonSharp: UdonSharp パッケージ導入
-Scripts Integration: Assets/VirtualTokyoMatching/Scripts/ を Unity Project に配置
-Scene Creation: UI Prefab・3D空間・テレポートポイント配置
-Multi-client Testing: エディタ複窓でのマルチプレイヤーテスト
-テスト・ビルドコマンド
-# Unity エディタでの複窓テスト（同期挙動検証）
-Unity.exe -projectPath . -username player1 &
-Unity.exe -projectPath . -username player2 &
+## クイックスタート（VPM CLI）
+- 概要: .NET 8 SDK→VPM CLI導入→テンプレ展開→新規プロジェクト作成→パッケージ追加→Unity Hub/Editorパス設定→Unityで開いてテストの順に進める。[2][7]
+- 代表コマンド:  
+  - dotnet tool install --global vrchat.vpm.cli（導入）[7]
+  - vpm install templates（テンプレ更新）[7]
+  - vpm new VirtualTokyoMatching World -p ~/projects（新規作成）[2]
+  - cd ~/projects/VirtualTokyoMatching && vpm check project . && vpm resolve project .（検証/解決）[2]
+  - vpm add package com.vrchat.worlds -p . && vpm add package com.vrchat.udonsharp -p . && vpm add package com.vrchat.clientsim -p .（追加）。[2]
+- Linuxの要点: settings.jsonにUnity Hub/Editorパスを手動記入し、vpm check hub/unityで認識させると安定する。[8][2]
 
-# Quest向けビルド（Android）
-Unity -buildTarget Android -projectPath .
+## プロジェクト構成
+- Assets/VirtualTokyoMatching 配下に Scripts（機能別サブフォルダ）、ScriptableObjects、Prefabs、Scenes、Resources、Materials、Audio を整理する。[9][6]
+- 主要スクリプト群はAnalysis/Assessment/Core/Matching/Performance/Safety/Session/Sync/UI/Vector に分割管理する。[9][6]
 
-# PC向けビルド（Windows64）
-Unity -buildTarget StandaloneWindows64 -projectPath .
-VRChat固有の制約・要件
-同期変数および帯域制限
-同期変数の上限: 約40個（現在red_0～5およびmeta変数9個を使用）
-PlayerData容量: キー長制限・値型制限（現在112+30+meta=約150キー）
-帯域制限: RequestSerializationの頻度制御およびLate-joiner対応が必須です。
-UdonSharpの制限事項
-System.Collections制限: Generic collections一部制限あり
-非同期処理制限: コルーチン・Task非対応
-Quest制限: 100MB容量・60FPS目標・モバイルGPU対応シェーダー
-品質ゲート（Quality Gates）
-PlayerData キー互換性テスト
-30ユーザー同時接続負荷テスト
-クエストの60FPS・PCの72FPS達成を確認
-Public公開前 Friends+ 1週間検証
-重要な開発指針
-Claude Code利用時の制約
-UdonSharp対応コード生成を最優先とする
-同期変数の追加・変更は最小限に留める
-PlayerDataキー管理の互換性を重視する
-外部API/DB連携は完全禁止
-VRChat SDK3 Worlds制約内での実装に限定
-禁止事項
-外部API/DB連携の追加
-他ユーザーPlayerData書き込み
-長文自由記述UIの導入
-画像の永続保存
-6D縮約を超える生データ公開
-設定管理
-すべてのデータをScriptableObjectとして外部化し、ビルドなしでランタイム更新可能：
+## 設定アセット（ScriptableObject）
+- QuestionDatabase: 112問・5択・軸(0–29)・選択肢ウェイトのスキーマで作成する。[10][6]
+- VectorConfiguration: 112→30DのW行列、30→6DのP行列、軸名/ラベルを設定する。[10][6]
+- SummaryTemplates: 30軸の正負/中立の記述・タグ・見出しテンプレと閾値を設定する。[10][1]
+- PerformanceSettings: 計算予算、目標FPS、同期間隔、テクスチャ上限、ログ可視化等を設定する。[10][1]
 
-112の質問と回答選択肢
-重み行列 W（112次元→30次元変換）
-投影行列 P（30次元→6次元への公開圧縮）
-自動生成される性格説明文用のテンプレート
-パフォーマンスパラメータ（フレームあたりの演算回数、互換性再計算のトリガー条件）
+## シーン統合
+- 階層: Environment（Lobby/SessionRooms/Lighting/Audio）／Systems（VTMController/NetworkedProfiles/SpawnSystem/WorldSettings）／UI（Main/Assessment/Recommender/Safety）で構成する。[11][9]
+- VTMController 配下に各UdonBehaviourを配置し、Inspectorで依存参照とイベント配列（onDataLoaded/onQuestionAnswered/onVectorUpdated 等）を結線する。[11][9]
+- NetworkedProfiles は想定人数分用意し、PublicProfilePublisherごとにユニークなNetwork IDを割り当てる。[9][11]
+
+## ビルドとパフォーマンス
+- 目標: PC≥72FPS/サイズ<200MB/全再計算≤5s、Quest≥60FPS/サイズ<100MB/全再計算≤10s を満たす。[4][1]
+- 最適化: ベイク照明、テクスチャ上限（PC:2048/Quest:1024）、モバイル系シェーダ、ミップ/ストリーミングを既定とする。[6][9]
+- テスト: エディタ複窓/ClientSimで同期・帯域・フレームを検証し、Friends+で1週間安定後にPublic化する運用とする。[6][1]
+
+## プライバシー/安全
+- 非公開データ: 112問回答と30軸はPlayerData（自分のみ）で保持し他者に公開しない。[1][4]
+- 公開データ: 6軸縮約＋タグ/見出し＋進捗％＋暫定フラグのみを同意時に同期し、OFFや退出で即時クリアする。[12][4]
+- 安全UI: 緊急非表示・退出・リセットを常時操作可能にし、公開OFF時は露出ゼロを保証する。[13][1]
+
+## 推薦/1on1設計
+- 類似度: 6軸同士のコサイン類似度で上位3件を算出し、進捗イベントで増分再計算する。[12][3]
+- 個室導線: 双方同意→個室割当→Teleport→15分タイマー→終了ベル→帰還、満室/同時招待は優先順位と再試行で解消する。[14][13]
+
+## トラブルシューティング（VPM/Linux）
+- vpm add の用法: 必ず「vpm add package <ID>」の形式で、プロジェクト直下（Packages/manifest.jsonがある場所）で実行する。[15][8]
+- settings.json 破損時: バックアップ→再生成→vpm install templates→vpm list repos で復旧し、Hub/Editorパスを再設定する。[8][15]
+- 互換性エラー: パッケージ追加失敗時はテンプレ更新や resolve、対応バージョン選定で再試行する。[8][2]
+
+## 法令/ガイドライン
+- VRChatの利用規約・コミュニティガイドラインに準拠し、ソーシャル/デーティング系表現は年齢適合・同意掲示・撮影/配信注意の設計を守る。[13][1]
+- 外部API/DBや生データ公開、長文自由記述、在室外推薦等は採用せず、単一ワールド内完結と露出最小化を原則とする。[3][4]
+
+## 今後の進め方
+- Resourcesに4種のScriptableObjectを最小構成で作成し、UI Prefabとシーン配線を完了させてローカル/ClientSimテストに進む。[9][2]
+- 目標性能を満たすまでPerfGuardとアセット予算を調整し、Friends+での安定確認後にPublicへ移行する。[6][1]
+
+## 参考（VPM CLIドキュメント）
+- vpmの導入/更新/テンプレ/新規作成/検証コマンドの詳細は公式ドキュメント・NuGetパッケージ説明に準拠する。[16][7]

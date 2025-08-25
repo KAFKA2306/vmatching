@@ -1,309 +1,82 @@
-# Virtual Tokyo Matching - Unity Project Setup Guide
+はい、依頼どおり ProjectSetup.md を**VPMベース**に書き直した内容を下記に示します。Ubuntu 22.04 での実用運用を前提に、プロジェクト作成から依存解決、シーン統合までをCLI中心で完結するフローに再構成しています。[1][2]
 
-## Project Structure Overview
+## 目的
+この文書は、Virtual Tokyo Matching のUnityプロジェクトを、GUIのVCCではなくCLIのVPMを中心に構築・管理するための手順書として再編成したものです。Linux(Ubuntu 22.04)での実用運用を前提に、テンプレート作成、設定、依存解決、シーン統合、テストまでの要点を最短経路で記載します。[2][1]
 
-The Virtual Tokyo Matching system is now implemented with all core UdonSharp components. Here's how to set up the Unity project for VRChat deployment.
+## 前提条件
+- OS: Ubuntu 22.04 LTS、ネットワーク接続、端末操作環境。[1]
+- Unity Hub/Unity Editor 2022.3 LTS 系のローカル配置（手動パス指定想定）。[1]
+- .NET SDK（VPMを実行するため、一般的に最新版を推奨）。[1]
 
-## Prerequisites
+## 1. VPM CLI の導入と初期化
+- VPM CLI をグローバル導入（dotnetツール経由）し、テンプレートを展開します。[1]
+  - 実行例: `dotnet tool install --global vrchat.vpm.cli` → `vpm install templates` → `vpm --version` で導入確認。[1]
+- 初回作成直後に自動生成される設定フォルダ（~/.local/share/VRChatCreatorCompanion/）にテンプレートが配置されることを確認します。[1]
 
-- Ubuntu 22.04 LTS (as specified in requirements)
-- Unity Hub installed
-- Unity 2022 LTS (latest) 
-- VRChat Creator Companion (VCC)
+## 2. Ubuntu向け VPM 設定（settings.json）
+- settings.json（~/.local/share/VRChatCreatorCompanion/settings.json）に Unity Hub/Editor のパスを手動で記載し、VPMがエディタを認識できるようにします。[1]
+- 記述例（実環境のパスに置き換えて使用）。[1]
+  - `pathToUnityHub`: 例 `/opt/unityhub/unityhub`。[1]
+  - `pathToUnityExe`: 例 `/home/USERNAME/Unity/Hub/Editor/2022.3.6f1/Editor/Unity`。[1]
+  - `unityEditors`: `version` と `path` のセットを配列で記載（Unity 2022.3系）。[1]
+- 反映確認: `vpm check hub` と `vpm check unity` を実行し、認識結果を確認します。[1]
 
-## Step 1: VCC Project Creation
+## 3. プロジェクトの新規作成（テンプレート）
+- テンプレートからVRChat Worldsプロジェクトを作成します。[1]
+  - 実行例: `vpm new VirtualTokyoMatching World -p ~/projects` → `cd ~/projects/VirtualTokyoMatching`。[1]
+- 作成直後の状態を検証・解決します。[1]
+  - 実行例: `vpm check project .` → `vpm resolve project .` → `vpm list packages -p .`。[1]
+- 以降のパッケージ追加は `vpm add package <ID> -p .` を基本とし、解決が必要な場合は再度 `vpm resolve project .` を実行します。[1]
 
-1. Open VRChat Creator Companion
-2. Create new project → Select "3D World"
-3. Choose Unity 2022.3 LTS version
-4. Name: "VirtualTokyoMatching"
-5. Wait for SDK3 Worlds to be installed automatically
+## 4. プロジェクト構成（Unity側ディレクトリ）
+- 既存の実装を次の構成で配置します（Assets/VirtualTokyoMatching 以下）。[1]
+  - Scripts（Analysis, Assessment, Core, Matching, Performance, Safety, Session, Sync, UI, Vector）。[1]
+  - ScriptableObjects（QuestionDatabase, VectorConfiguration, SummaryTemplates, PerformanceSettings）。[1]
+  - Prefabs（UI, Rooms, Systems）、Materials、Textures、Audio を用途別に配置します。[1]
 
-## Step 2: UdonSharp Installation
+## 5. ScriptableObject の作成と設定
+- Resources 配下に以下4種のアセットを作成し、最小構成から投入します。[1]
+  - QuestionDatabase: 112問・5択・軸(0–29)・選択肢ウェイトのスキーマに沿って作成。[1]
+  - VectorConfiguration: 112→30DのW、30→6DのP、軸名/ラベルを設定。[1]
+  - SummaryTemplates: 30軸の記述テンプレート、タグ、見出しテンプレートを設定。[1]
+  - PerformanceSettings: フレーム予算、目標FPS、計算間隔などの実行パラメータを設定。[1]
 
-1. In VCC, go to your project
-2. Click "Manage Project"
-3. Add Package: UdonSharp (community package)
-4. Wait for compilation to complete
+## 6. シーン統合（最短ガイド）
+- シーン階層は VirtualTokyoMatchingWorld をルートに、Environment/Systems/UI/Testing で整理します。[2]
+- Systems/VTMController に各UdonBehaviour（PlayerDataManager, DiagnosisController, VectorBuilder, CompatibilityCalculator, PerfGuard, ValuesSummaryGenerator, MainUIController, SafetyController, SessionRoomManager）を配置します。[2]
+- NetworkedProfiles を想定最大人数分設置し、PublicProfilePublisher ごとにユニークなNetwork IDを割り当てます。[2]
+- UIは MainLobby（Screen Space）と Assessment/Recommendations/Safety（World Space）を設置し、TextMeshProや各Button/Slider参照をInspectorで結線します。[2]
+- VRC Scene Descriptor を設定し、ロビーのSpawnPoints、Reference Camera、Respawn Height を指定します。[2]
 
-## Step 3: Project File Structure
+## 7. 依存参照とイベント配線
+- PlayerDataManager の onDataLoadedTargets に DiagnosisController、VectorBuilder、MainUIController、SafetyController を割り当てます。[2]
+- DiagnosisController の onQuestionAnsweredTargets に VectorBuilder と PublicProfilePublisher を割り当てます。[2]
+- VectorBuilder の onVectorUpdatedTargets と onVectorFinalizedTargets に PublicProfilePublisher と CompatibilityCalculator を割り当てます。[2]
+- CompatibilityCalculator の完了イベントを RecommenderUI に接続し、UI更新のトリガにします。[2]
 
-Create the following directory structure in your Unity project:
+## 8. パフォーマンスとビルド
+- PC目標: 72fps/200MB以下/再計算≤5s、Quest目標: 60fps/100MB以下/再計算≤10s を目安に最適化します。[1]
+- テクスチャ上限（PC:2048、Quest:1024）、ベイク照明、最小限のリアルタイムライト、軽量シェーダ運用を徹底します。[1]
+- ビルド設定は PC(Standalone Windows 64-bit) と Quest(Android) を用意し、サイズ・品質・圧縮方式（ASTC等）を目標に合わせて調整します。[1]
 
-```
-Assets/
-├── VirtualTokyoMatching/
-│   ├── Scripts/
-│   │   ├── Analysis/
-│   │   │   └── ValuesSummaryGenerator.cs
-│   │   ├── Assessment/
-│   │   │   └── DiagnosisController.cs
-│   │   ├── Core/
-│   │   │   └── PlayerDataManager.cs
-│   │   ├── Matching/
-│   │   │   └── CompatibilityCalculator.cs
-│   │   ├── Performance/
-│   │   │   └── PerfGuard.cs
-│   │   ├── Safety/
-│   │   │   └── SafetyController.cs
-│   │   ├── Session/
-│   │   │   └── SessionRoomManager.cs
-│   │   ├── Sync/
-│   │   │   └── PublicProfilePublisher.cs
-│   │   ├── UI/
-│   │   │   ├── MainUIController.cs
-│   │   │   └── RecommenderUI.cs
-│   │   └── Vector/
-│   │       └── VectorBuilder.cs
-│   ├── ScriptableObjects/
-│   │   ├── QuestionDatabase.cs
-│   │   ├── VectorConfiguration.cs
-│   │   ├── SummaryTemplates.cs
-│   │   └── PerformanceSettings.cs
-│   ├── Prefabs/
-│   │   ├── UI/
-│   │   ├── Rooms/
-│   │   └── Systems/
-│   ├── Materials/
-│   ├── Textures/
-│   └── Audio/
-```
+## 9. テストワークフロー
+- エディタ内で UI 遷移、保存/再開、公開/非公開、レコメンド更新、1on1招待までを一通り検証します。[1]
+- 複数インスタンスや実機VRChatクライアントでの挙動確認を行い、同期・帯域・フレームタイムをログと合わせて点検します。[1]
+- 目標を満たしたら Friends+ で1週間の安定検証を行い、その後 Public 化します。[1]
 
-## Step 4: Scene Setup
+## 10. セキュリティ/プライバシー要点
+- 112問の生回答と30Dベクトルは非公開、公開は6D縮約＋タグ/ヘッドラインのみで、公開は明示同意ベースです。[1]
+- 緊急非表示やセッション退出、データリセットをSafety UIから常時操作可能にします。[1]
 
-Create the main scene with these components:
+## 付録A: よく使うVPMコマンド（例）
+- 初期化: `dotnet tool install --global vrchat.vpm.cli` → `vpm install templates`。[1]
+- 新規作成: `vpm new VirtualTokyoMatching World -p ~/projects` → `cd ~/projects/VirtualTokyoMatching`。[1]
+- 検証/解決: `vpm check project .` → `vpm resolve project .` → `vpm list packages -p .`。[1]
+- 追加/削除: `vpm add package <ID> -p .`、`vpm remove package <ID> -p .`（解決が必要なら resolve を再実行）。[1]
 
-### World Structure
-```
-VTM_World
-├── Lobby
-│   ├── SpawnPoint
-│   ├── UI_Canvas_Main
-│   └── LobbyEnvironment
-├── AssessmentArea
-│   ├── UI_Canvas_Assessment
-│   └── AssessmentEnvironment  
-├── PrivateRooms (3 rooms)
-│   ├── Room_01
-│   │   ├── SpawnPoint_1A
-│   │   ├── SpawnPoint_1B
-│   │   └── UI_Canvas_Session
-│   ├── Room_02
-│   └── Room_03
-└── SystemManagers
-    ├── PlayerDataManager
-    ├── MainUIController
-    ├── DiagnosisController
-    ├── VectorBuilder
-    ├── PublicProfilePublisher
-    ├── CompatibilityCalculator
-    ├── RecommenderUI
-    ├── SessionRoomManager
-    ├── ValuesSummaryGenerator
-    ├── PerfGuard
-    └── SafetyController
-```
+## 付録B: 次に行う作業（チェックリスト）
+- Resourcesに4種のScriptableObjectを作成し、最小データを投入。[1]
+- Systems/UI/NetworkedProfilesを配置し、Inspector参照とイベント配線を完了。[2]
+- 目標パフォーマンスを満たすまで品質と負荷を調整し、Friends+→Public へ段階的に公開。[1]
 
-## Step 5: ScriptableObject Configuration
-
-Create ScriptableObject assets for configuration:
-
-1. Right-click in Project → Create → VTM → Question Database
-   - Configure 112 questions with 5-choice answers
-   - Set target axes (0-29) and choice weights
-
-2. Create → VTM → Vector Configuration
-   - Configure W matrix (112×30 transformation)
-   - Configure P matrix (30×6 projection)
-   - Set axis names and labels
-
-3. Create → VTM → Summary Templates
-   - Configure personality descriptions for each axis
-   - Set positive/negative/neutral trait descriptions
-   - Configure headline templates
-
-4. Create → VTM → Performance Settings
-   - Set target FPS (PC: 72, Quest: 60)
-   - Configure calculation budgets
-   - Set texture resolution limits
-
-## Step 6: UI Prefab Creation
-
-### Main Lobby UI Prefab
-```
-UI_Canvas_Main
-├── LobbyPanel
-│   ├── WelcomeText
-│   ├── ProgressSlider
-│   ├── Button_StartAssessment
-│   ├── Button_ContinueAssessment
-│   ├── Button_PublicSharing
-│   ├── Button_ViewRecommendations
-│   ├── Button_GoToRoom
-│   └── StatusText
-├── LoadingScreen
-└── BackToLobbyButton
-```
-
-### Assessment UI Prefab
-```
-UI_Canvas_Assessment
-├── AssessmentPanel
-│   ├── QuestionText
-│   ├── ChoiceButtons[5]
-│   ├── NavigationButtons
-│   ├── ProgressBar
-│   └── QuestionCounter
-└── StatusDisplay
-```
-
-### Recommendations UI Prefab
-```
-UI_Canvas_Recommendations
-├── RecommendationsPanel
-│   ├── RecommendationCard[3]
-│   │   ├── PlayerName
-│   │   ├── CompatibilityRing
-│   │   ├── HeadlineText
-│   │   ├── TagContainer
-│   │   ├── ProvisionalBadge
-│   │   ├── ProgressSlider
-│   │   ├── ViewDetailsButton
-│   │   └── InviteButton
-│   └── LoadingIndicator
-├── DetailPanel
-│   ├── DetailInfo
-│   ├── RadarChart
-│   ├── TagList
-│   └── ActionButtons
-└── StatusText
-```
-
-## Step 7: Component Wiring
-
-For each UdonSharp script, configure the Inspector references:
-
-### PlayerDataManager
-- Set event targets for data loaded/saved/reset events
-
-### DiagnosisController
-- Link QuestionDatabase ScriptableObject
-- Connect UI elements (questionText, choiceButtons, etc.)
-- Set PlayerDataManager and VectorBuilder references
-
-### VectorBuilder
-- Link VectorConfiguration ScriptableObject
-- Set PlayerDataManager reference
-- Configure event targets
-
-### PublicProfilePublisher
-- Set dependencies (PlayerDataManager, VectorBuilder, etc.)
-- Configure sync mode to Manual
-
-### CompatibilityCalculator
-- Link PerfGuard and other dependencies
-- Set calculation parameters
-
-### RecommenderUI
-- Connect all UI elements
-- Link CompatibilityCalculator and SessionRoomManager
-
-### SessionRoomManager
-- Configure session rooms (spawn points, UI, etc.)
-- Set lobby spawn point
-- Configure sync mode to Manual
-
-## Step 8: Performance Optimization
-
-### Texture Settings
-- PC: Max 2048×2048
-- Quest: Max 1024×1024
-- Enable mipmaps for distance optimization
-
-### Lighting
-- Use baked lighting for static geometry
-- Minimize real-time lights
-- Use light probes for dynamic objects
-
-### Audio
-- Compress audio files
-- Use 3D spatial audio for immersion
-- Set appropriate audio occlusion for rooms
-
-## Step 9: Testing Workflow
-
-### Local Testing
-1. Build and Test → Windows
-2. Open multiple Unity instances for multiplayer testing
-3. Test all user flows:
-   - Assessment start/continue/complete
-   - Public sharing on/off
-   - Recommendation viewing
-   - 1-on-1 invitations
-   - Session management
-
-### VCC Testing
-1. Build and Test → Android (for Quest)
-2. Test in VRChat client
-3. Verify PlayerData persistence
-4. Test multiplayer sync
-
-## Step 10: Build Configuration
-
-### PC Build Settings
-- Platform: Standalone Windows 64-bit
-- Target: Windows
-- Quality: High
-- Max size: <200MB
-
-### Quest Build Settings  
-- Platform: Android
-- Target: Quest/Quest 2
-- Quality: Medium
-- Max size: <100MB
-- Texture compression: ASTC
-
-## Step 11: World Upload
-
-1. VRChat SDK → Build & Publish
-2. Set world name: "Virtual Tokyo Matching"
-3. Set capacity: 20-40 players (recommended)
-4. Configure tags: social, dating, personality, matching
-5. Upload and test in Friends+ before Public
-
-## Configuration Templates
-
-The system requires these data configurations:
-
-### Example Question Entry
-```
-Question 1:
-Text: "新しい環境に適応するのは得意ですか？"
-Choices: ["全く違う", "やや違う", "どちらでもない", "やや当てはまる", "非常に当てはまる"]
-Target Axis: 0 (Adaptability)
-Weights: [-2, -1, 0, 1, 2]
-```
-
-### Performance Targets
-- PC: ≥72 FPS, <200MB, recalculation ≤5s
-- Quest: ≥60 FPS, <100MB, recalculation ≤10s
-
-## Security Considerations
-
-- Raw assessment responses (112 questions) remain private
-- Only 6D reduced vectors + summaries are shared publicly
-- Public sharing requires explicit user consent
-- Emergency hide functions available at all times
-- Session data is ephemeral (not persisted)
-
-## Next Steps
-
-1. Configure all ScriptableObject assets with real data
-2. Create UI prefabs with proper styling
-3. Design and model the 3D world environment
-4. Test thoroughly with multiple users
-5. Optimize for target performance metrics
-6. Deploy to Friends+ for beta testing
-7. Launch publicly after validation
-
-This implementation provides a complete foundation for the Virtual Tokyo Matching VRChat world with progressive personality matching capabilities.
+以上を新しい ProjectSetup.md（VPM版）として保存すれば、Linux中心の実運用に適した、再現性の高いセットアップ手順として利用できます。[2][1]
