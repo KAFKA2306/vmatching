@@ -1,0 +1,1176 @@
+using UnityEngine;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using TMPro;
+using System.Collections.Generic;
+using VRC.SDKBase;
+
+namespace VirtualTokyoMatching.Editor
+{
+    /// <summary>
+    /// CLI-driven headless scene builder for Virtual Tokyo Matching VRChat world.
+    /// Creates complete world structure programmatically without manual Unity Editor interaction.
+    /// </summary>
+    public class VTMSceneBuilder
+    {
+        private const string SCENE_PATH = "Assets/VirtualTokyoMatching/Scenes/VirtualTokyoMatching.unity";
+        private const string MATERIALS_PATH = "Assets/VirtualTokyoMatching/Materials";
+        private const string PREFABS_PATH = "Assets/VirtualTokyoMatching/Prefabs";
+        
+        [MenuItem("VTM/Create Complete World")]
+        public static void CreateCompleteWorld()
+        {
+            Debug.Log("[VTM Builder] Starting headless world creation...");
+            
+            try
+            {
+                // 1. Create new scene
+                Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                Debug.Log("[VTM Builder] New scene created");
+                
+                // 2. Build environment
+                CreateEnvironment();
+                
+                // 3. Setup lighting
+                SetupLighting();
+                
+                // 4. Create spawn system
+                CreateSpawnSystem();
+                
+                // 5. Setup VRChat world components
+                SetupVRCWorld();
+                
+                // 6. Create UI systems
+                CreateUISystem();
+                
+                // 7. Wire core systems
+                WireCoreComponents();
+                
+                // 8. Ensure directories exist
+                EnsureDirectoryStructure();
+                
+                // 9. Save scene
+                EditorSceneManager.SaveScene(newScene, SCENE_PATH);
+                
+                Debug.Log("[VTM Builder] Headless world creation completed successfully!");
+                Debug.Log($"[VTM Builder] Scene saved to: {SCENE_PATH}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] Failed to create world: {e.Message}");
+                Debug.LogError($"[VTM Builder] Stack trace: {e.StackTrace}");
+            }
+        }
+
+        static void EnsureDirectoryStructure()
+        {
+            string[] directories = {
+                "Assets/VirtualTokyoMatching",
+                "Assets/VirtualTokyoMatching/Scenes",
+                MATERIALS_PATH,
+                PREFABS_PATH,
+                "Assets/VirtualTokyoMatching/Prefabs/Environment",
+                "Assets/VirtualTokyoMatching/Prefabs/UI",
+                "Assets/VirtualTokyoMatching/Prefabs/Systems"
+            };
+            
+            foreach (string dir in directories)
+            {
+                if (!AssetDatabase.IsValidFolder(dir))
+                {
+                    string parentDir = System.IO.Path.GetDirectoryName(dir).Replace("\\", "/");
+                    string folderName = System.IO.Path.GetFileName(dir);
+                    AssetDatabase.CreateFolder(parentDir, folderName);
+                    Debug.Log($"[VTM Builder] Created directory: {dir}");
+                }
+            }
+        }
+
+        static void CreateEnvironment()
+        {
+            Debug.Log("[VTM Builder] Creating environment structures...");
+            
+            // Create root environment object
+            GameObject environmentRoot = new GameObject("Environment");
+            
+            // Create Lobby
+            GameObject lobby = CreateLobby(environmentRoot.transform);
+            
+            // Create Session Rooms
+            GameObject sessionRooms = new GameObject("SessionRooms");
+            sessionRooms.transform.SetParent(environmentRoot.transform);
+            
+            for (int i = 1; i <= 3; i++)
+            {
+                CreateSessionRoom(sessionRooms.transform, i);
+            }
+            
+            Debug.Log("[VTM Builder] Environment creation completed");
+        }
+
+        static GameObject CreateLobby(Transform parent)
+        {
+            GameObject lobby = new GameObject("Lobby");
+            lobby.transform.SetParent(parent);
+            
+            // Lobby floor (20x20)
+            GameObject lobbyFloor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            lobbyFloor.name = "LobbyFloor";
+            lobbyFloor.transform.SetParent(lobby.transform);
+            lobbyFloor.transform.localScale = new Vector3(2f, 1f, 2f); // 20x20 meters
+            lobbyFloor.transform.position = Vector3.zero;
+            
+            // Tag for material application
+            lobbyFloor.tag = "Floor";
+            
+            // Lobby walls
+            CreateWalls(lobby.transform, "Lobby");
+            
+            // Lobby ceiling
+            GameObject ceiling = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ceiling.name = "LobbyCeiling";
+            ceiling.transform.SetParent(lobby.transform);
+            ceiling.transform.localScale = new Vector3(2f, 1f, 2f);
+            ceiling.transform.position = new Vector3(0, 6f, 0);
+            ceiling.transform.rotation = Quaternion.Euler(180, 0, 0);
+            
+            Debug.Log("[VTM Builder] Lobby created");
+            return lobby;
+        }
+
+        static void CreateWalls(Transform parent, string wallType)
+        {
+            GameObject walls = new GameObject($"{wallType}Walls");
+            walls.transform.SetParent(parent);
+            
+            // Create 4 walls around area
+            Vector3[] wallPositions = {
+                new Vector3(0, 2.5f, 10),   // North wall
+                new Vector3(0, 2.5f, -10),  // South wall
+                new Vector3(10, 2.5f, 0),   // East wall
+                new Vector3(-10, 2.5f, 0)   // West wall
+            };
+            
+            Vector3[] wallScales = {
+                new Vector3(20, 5, 0.5f),   // North-South walls
+                new Vector3(20, 5, 0.5f),   // North-South walls
+                new Vector3(0.5f, 5, 20),   // East-West walls
+                new Vector3(0.5f, 5, 20)    // East-West walls
+            };
+            
+            string[] wallNames = { "NorthWall", "SouthWall", "EastWall", "WestWall" };
+            
+            for (int i = 0; i < 4; i++)
+            {
+                GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.name = $"{wallType}_{wallNames[i]}";
+                wall.transform.SetParent(walls.transform);
+                wall.transform.position = wallPositions[i];
+                wall.transform.localScale = wallScales[i];
+                wall.tag = "Wall";
+            }
+        }
+
+        static void CreateSessionRoom(Transform parent, int roomNumber)
+        {
+            GameObject room = new GameObject($"Room{roomNumber:00}");
+            room.transform.SetParent(parent);
+            
+            // Position rooms around lobby (triangular arrangement)
+            Vector3 roomPosition = new Vector3(
+                25 * Mathf.Cos(roomNumber * Mathf.PI * 2 / 3),
+                0,
+                25 * Mathf.Sin(roomNumber * Mathf.PI * 2 / 3)
+            );
+            room.transform.position = roomPosition;
+            
+            // Room environment
+            GameObject environment = new GameObject("Environment");
+            environment.transform.SetParent(room.transform);
+            
+            // Room floor
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "RoomFloor";
+            floor.transform.SetParent(environment.transform);
+            floor.transform.localScale = new Vector3(1f, 1f, 1f); // 10x10 meters
+            floor.tag = "RoomFloor";
+            
+            // Create room walls (private enclosure)
+            CreateRoomWalls(environment.transform, roomNumber);
+            
+            // Room furniture
+            CreateRoomFurniture(environment.transform);
+            
+            // Create spawn points for this room
+            GameObject spawnPoints = new GameObject("SpawnPoints");
+            spawnPoints.transform.SetParent(room.transform);
+            
+            CreateSpawnPoint(spawnPoints.transform, $"R_{roomNumber:00}_Player1", new Vector3(-2, 0.1f, 0), new Vector3(4, 0.1f, 0));
+            CreateSpawnPoint(spawnPoints.transform, $"R_{roomNumber:00}_Player2", new Vector3(2, 0.1f, 0), new Vector3(-4, 0.1f, 0));
+            
+            Debug.Log($"[VTM Builder] Session room {roomNumber} created");
+        }
+
+        static void CreateRoomWalls(Transform parent, int roomNumber)
+        {
+            GameObject walls = new GameObject("Walls");
+            walls.transform.SetParent(parent);
+            
+            Vector3[] wallPositions = {
+                new Vector3(0, 2.5f, 5),    // North
+                new Vector3(0, 2.5f, -5),   // South
+                new Vector3(5, 2.5f, 0),    // East
+                new Vector3(-5, 2.5f, 0)    // West
+            };
+            
+            Vector3[] wallScales = {
+                new Vector3(10, 5, 0.5f),   // North-South walls
+                new Vector3(10, 5, 0.5f),   // North-South walls
+                new Vector3(0.5f, 5, 10),   // East-West walls
+                new Vector3(0.5f, 5, 10)    // East-West walls
+            };
+            
+            for (int i = 0; i < 4; i++)
+            {
+                GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.name = $"Room{roomNumber:00}_Wall_{i + 1}";
+                wall.transform.SetParent(walls.transform);
+                wall.transform.position = wallPositions[i];
+                wall.transform.localScale = wallScales[i];
+                wall.tag = "Wall";
+            }
+        }
+
+        static void CreateRoomFurniture(Transform parent)
+        {
+            GameObject furniture = new GameObject("Furniture");
+            furniture.transform.SetParent(parent);
+            
+            // Two chairs facing each other
+            GameObject chair1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            chair1.name = "Chair1";
+            chair1.transform.SetParent(furniture.transform);
+            chair1.transform.position = new Vector3(-3, 0.5f, 0);
+            chair1.transform.localScale = new Vector3(1, 1, 1);
+            chair1.tag = "Furniture";
+            
+            GameObject chair2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            chair2.name = "Chair2";
+            chair2.transform.SetParent(furniture.transform);
+            chair2.transform.position = new Vector3(3, 0.5f, 0);
+            chair2.transform.localScale = new Vector3(1, 1, 1);
+            chair2.tag = "Furniture";
+            
+            // Small table in center
+            GameObject table = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            table.name = "Table";
+            table.transform.SetParent(furniture.transform);
+            table.transform.position = new Vector3(0, 0.4f, 0);
+            table.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
+            table.tag = "Furniture";
+        }
+
+        static void CreateSpawnSystem()
+        {
+            Debug.Log("[VTM Builder] Creating spawn system...");
+            
+            GameObject spawnSystem = new GameObject("SpawnSystem");
+            
+            // Lobby spawn points (8 distributed around lobby)
+            GameObject lobbySpawns = new GameObject("LobbySpawns");
+            lobbySpawns.transform.SetParent(spawnSystem.transform);
+            
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * 360f / 8f;
+                Vector3 spawnPos = new Vector3(
+                    7f * Mathf.Cos(angle * Mathf.Deg2Rad),
+                    0.1f,
+                    7f * Mathf.Sin(angle * Mathf.Deg2Rad)
+                );
+                
+                Vector3 lookTarget = Vector3.zero; // Look toward center
+                CreateSpawnPoint(lobbySpawns.transform, $"L_Spawn_{i + 1:00}", spawnPos, lookTarget);
+            }
+            
+            // Entrance spawn point
+            CreateSpawnPoint(spawnSystem.transform, "E_Entrance", new Vector3(0, 0.1f, -8), new Vector3(0, 0.1f, 0));
+            
+            // Return point
+            CreateSpawnPoint(spawnSystem.transform, "X_Return", new Vector3(0, 0.1f, -6), new Vector3(0, 0.1f, 0));
+            
+            Debug.Log("[VTM Builder] Spawn system created with 10 spawn points");
+        }
+
+        static void CreateSpawnPoint(Transform parent, string name, Vector3 position, Vector3 lookTarget)
+        {
+            GameObject spawnPoint = new GameObject(name);
+            spawnPoint.transform.SetParent(parent);
+            spawnPoint.transform.position = position;
+            
+            // Look toward target
+            Vector3 direction = (lookTarget - position).normalized;
+            if (direction != Vector3.zero)
+            {
+                spawnPoint.transform.rotation = Quaternion.LookRotation(direction);
+            }
+            
+            // Add visual marker for editor testing (will be hidden in build)
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            marker.name = "SpawnMarker";
+            marker.transform.SetParent(spawnPoint.transform);
+            marker.transform.localPosition = Vector3.zero;
+            marker.transform.localScale = new Vector3(0.5f, 0.1f, 0.5f);
+            marker.tag = "SpawnMarker";
+            
+            // Color code markers
+            Renderer renderer = marker.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Material markerMat = new Material(Shader.Find("Standard"));
+                if (name.StartsWith("L_"))
+                    markerMat.color = Color.green;  // Lobby spawns
+                else if (name.StartsWith("R_"))
+                    markerMat.color = Color.blue;   // Room spawns
+                else if (name.StartsWith("E_"))
+                    markerMat.color = Color.yellow; // Entrance
+                else
+                    markerMat.color = Color.red;    // Return/other
+                
+                renderer.material = markerMat;
+            }
+        }
+
+        static void SetupLighting()
+        {
+            Debug.Log("[VTM Builder] Setting up lighting system...");
+            
+            GameObject lightingRoot = new GameObject("Lighting");
+            
+            // Directional light (sun)
+            GameObject sunLight = new GameObject("DirectionalLight");
+            sunLight.transform.SetParent(lightingRoot.transform);
+            Light sun = sunLight.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.intensity = 1f;
+            sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.7f;
+            sun.color = new Color(1f, 0.95f, 0.8f); // Warm sunlight
+            sunLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            
+            // Lobby ambient lighting
+            GameObject lobbyLight = new GameObject("LobbyAmbientLight");
+            lobbyLight.transform.SetParent(lightingRoot.transform);
+            Light ambient = lobbyLight.AddComponent<Light>();
+            ambient.type = LightType.Point;
+            ambient.intensity = 0.8f;
+            ambient.range = 20f;
+            ambient.color = new Color(0.9f, 0.9f, 1f); // Cool ambient
+            lobbyLight.transform.position = new Vector3(0, 8, 0);
+            
+            // Room lighting for each session room
+            for (int i = 1; i <= 3; i++)
+            {
+                Vector3 roomPosition = new Vector3(
+                    25 * Mathf.Cos(i * Mathf.PI * 2 / 3),
+                    6,
+                    25 * Mathf.Sin(i * Mathf.PI * 2 / 3)
+                );
+                
+                GameObject roomLight = new GameObject($"Room{i:00}_Light");
+                roomLight.transform.SetParent(lightingRoot.transform);
+                roomLight.transform.position = roomPosition;
+                
+                Light light = roomLight.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.intensity = 1.2f;
+                light.range = 12f;
+                light.color = new Color(1f, 0.9f, 0.7f); // Warm room lighting
+            }
+            
+            // Set rendering settings for optimization
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.212f, 0.227f, 0.259f);
+            RenderSettings.ambientEquatorColor = new Color(0.114f, 0.125f, 0.133f);
+            RenderSettings.ambientGroundColor = new Color(0.047f, 0.043f, 0.035f);
+            RenderSettings.ambientIntensity = 1.2f;
+            
+            Debug.Log("[VTM Builder] Lighting system configured");
+        }
+
+        static void SetupVRCWorld()
+        {
+            Debug.Log("[VTM Builder] Setting up VRChat world components...");
+            
+            GameObject vrcWorld = new GameObject("VRCWorld");
+            
+            // Note: VRC_SceneDescriptor will need to be added manually in Unity Editor
+            // after VRChat SDK is imported, or via script if SDK is available
+            
+            Debug.Log("[VTM Builder] VRCWorld object created - VRC_SceneDescriptor component needs manual addition after SDK import");
+        }
+
+        static void CreateUISystem()
+        {
+            Debug.Log("[VTM Builder] Creating UI system...");
+            
+            GameObject uiRoot = new GameObject("UI");
+            
+            // Event System (required for UI interaction)
+            GameObject eventSystem = new GameObject("EventSystem");
+            eventSystem.transform.SetParent(uiRoot.transform);
+            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            eventSystem.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            
+            // Main Lobby Canvas (Screen Space Overlay)
+            CreateMainLobbyCanvas(uiRoot.transform);
+            
+            // Assessment Canvas (World Space)
+            CreateAssessmentCanvas(uiRoot.transform);
+            
+            // Recommender Canvas (World Space)
+            CreateRecommenderCanvas(uiRoot.transform);
+            
+            // Safety Canvas (World Space)
+            CreateSafetyCanvas(uiRoot.transform);
+            
+            Debug.Log("[VTM Builder] UI system created with 4 canvas objects");
+        }
+
+        static void CreateMainLobbyCanvas(Transform parent)
+        {
+            GameObject canvas = new GameObject("MainLobbyCanvas");
+            canvas.transform.SetParent(parent);
+            
+            Canvas canvasComponent = canvas.AddComponent<Canvas>();
+            canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvasComponent.sortingOrder = 0;
+            
+            CanvasScaler scaler = canvas.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+            
+            canvas.AddComponent<GraphicRaycaster>();
+            
+            // Create main action panel
+            GameObject actionPanel = CreateUIPanel(canvas.transform, "ActionPanel", new Vector2(300, 400), new Vector2(0, -50));
+            
+            // Create buttons with Japanese text
+            CreateUIButton(actionPanel.transform, "StartAssessmentButton", "診断を開始", new Vector2(0, 150), new Vector2(250, 50));
+            CreateUIButton(actionPanel.transform, "ContinueAssessmentButton", "診断を続ける", new Vector2(0, 75), new Vector2(250, 50));
+            CreateUIButton(actionPanel.transform, "ViewRecommendationsButton", "おすすめを見る", new Vector2(0, 0), new Vector2(250, 50));
+            CreateUIButton(actionPanel.transform, "GoToRoomButton", "個室へ直行", new Vector2(0, -75), new Vector2(250, 50));
+            CreateUIButton(actionPanel.transform, "SafetySettingsButton", "プライバシー設定", new Vector2(0, -150), new Vector2(250, 50));
+            
+            // Welcome text
+            CreateUIText(canvas.transform, "WelcomeText", "Virtual Tokyo Matching へようこそ", new Vector2(0, 400), new Vector2(800, 100));
+        }
+
+        static void CreateAssessmentCanvas(Transform parent)
+        {
+            GameObject canvas = new GameObject("AssessmentCanvas");
+            canvas.transform.SetParent(parent);
+            canvas.transform.position = new Vector3(0, 2, 5);
+            canvas.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            
+            Canvas canvasComponent = canvas.AddComponent<Canvas>();
+            canvasComponent.renderMode = RenderMode.WorldSpace;
+            canvasComponent.sortingOrder = 1;
+            
+            CanvasScaler scaler = canvas.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.scaleFactor = 1f;
+            
+            canvas.AddComponent<GraphicRaycaster>();
+            
+            // Create question panel structure
+            GameObject questionPanel = CreateUIPanel(canvas.transform, "QuestionPanel", new Vector2(800, 600), Vector2.zero);
+            
+            CreateUIText(questionPanel.transform, "QuestionText", "質問がここに表示されます", new Vector2(0, 200), new Vector2(700, 100));
+            CreateUIText(questionPanel.transform, "QuestionNumber", "質問 1 / 112", new Vector2(0, 150), new Vector2(300, 50));
+            
+            // Choice buttons
+            for (int i = 1; i <= 5; i++)
+            {
+                CreateUIButton(questionPanel.transform, $"Choice{i}Button", $"選択肢 {i}", 
+                    new Vector2(0, 100 - i * 40), new Vector2(600, 35));
+            }
+            
+            // Navigation
+            CreateUIButton(questionPanel.transform, "PreviousButton", "前へ", new Vector2(-200, -200), new Vector2(100, 40));
+            CreateUIButton(questionPanel.transform, "NextButton", "次へ", new Vector2(-50, -200), new Vector2(100, 40));
+            CreateUIButton(questionPanel.transform, "SkipButton", "スキップ", new Vector2(100, -200), new Vector2(100, 40));
+            CreateUIButton(questionPanel.transform, "FinishButton", "完了", new Vector2(200, -200), new Vector2(100, 40));
+        }
+
+        static void CreateRecommenderCanvas(Transform parent)
+        {
+            GameObject canvas = new GameObject("RecommenderCanvas");
+            canvas.transform.SetParent(parent);
+            canvas.transform.position = new Vector3(-5, 2, 0);
+            canvas.transform.rotation = Quaternion.Euler(0, 45, 0);
+            canvas.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            
+            Canvas canvasComponent = canvas.AddComponent<Canvas>();
+            canvasComponent.renderMode = RenderMode.WorldSpace;
+            canvasComponent.sortingOrder = 2;
+            
+            canvas.AddComponent<GraphicRaycaster>();
+            
+            // Recommendation cards panel
+            GameObject cardsPanel = CreateUIPanel(canvas.transform, "RecommendationCards", new Vector2(600, 800), Vector2.zero);
+            
+            CreateUIText(cardsPanel.transform, "Title", "おすすめのユーザー", new Vector2(0, 350), new Vector2(500, 60));
+            
+            // Create 3 recommendation cards
+            for (int i = 1; i <= 3; i++)
+            {
+                GameObject card = CreateUIPanel(cardsPanel.transform, $"Card{i:00}", new Vector2(550, 200), 
+                    new Vector2(0, 200 - i * 220));
+                
+                CreateUIText(card.transform, "PlayerName", $"プレイヤー {i}", new Vector2(0, 60), new Vector2(300, 40));
+                CreateUIText(card.transform, "Compatibility", "85%", new Vector2(-150, 20), new Vector2(100, 30));
+                CreateUIText(card.transform, "Progress", "進捗: 75%", new Vector2(150, 20), new Vector2(100, 30));
+                CreateUIText(card.transform, "Headline", "創造的で社交的な方", new Vector2(0, -20), new Vector2(400, 30));
+                
+                CreateUIButton(card.transform, "ViewDetailsButton", "詳細", new Vector2(-100, -60), new Vector2(80, 30));
+                CreateUIButton(card.transform, "InviteButton", "招待", new Vector2(100, -60), new Vector2(80, 30));
+            }
+        }
+
+        static void CreateSafetyCanvas(Transform parent)
+        {
+            GameObject canvas = new GameObject("SafetyCanvas");
+            canvas.transform.SetParent(parent);
+            canvas.transform.position = new Vector3(5, 2, 0);
+            canvas.transform.rotation = Quaternion.Euler(0, -45, 0);
+            canvas.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            
+            Canvas canvasComponent = canvas.AddComponent<Canvas>();
+            canvasComponent.renderMode = RenderMode.WorldSpace;
+            canvasComponent.sortingOrder = 10;
+            
+            canvas.AddComponent<GraphicRaycaster>();
+            
+            GameObject safetyPanel = CreateUIPanel(canvas.transform, "SafetyPanel", new Vector2(400, 500), Vector2.zero);
+            safetyPanel.SetActive(false); // Initially hidden
+            
+            CreateUIText(safetyPanel.transform, "Title", "プライバシー設定", new Vector2(0, 200), new Vector2(350, 50));
+            
+            CreateUIToggle(safetyPanel.transform, "PublicSharingToggle", "プロフィールを公開", new Vector2(0, 120));
+            CreateUIToggle(safetyPanel.transform, "ProvisionalSharingToggle", "暫定データも公開", new Vector2(0, 80));
+            
+            CreateUIButton(safetyPanel.transform, "HideProfileButton", "即座に非公開", new Vector2(0, 20), new Vector2(200, 40));
+            CreateUIButton(safetyPanel.transform, "ResetDataButton", "データリセット", new Vector2(0, -30), new Vector2(200, 40));
+            CreateUIButton(safetyPanel.transform, "EmergencyHideButton", "緊急非表示", new Vector2(0, -80), new Vector2(200, 40));
+            CreateUIButton(safetyPanel.transform, "CloseButton", "閉じる", new Vector2(0, -150), new Vector2(150, 40));
+        }
+
+        static void WireCoreComponents()
+        {
+            Debug.Log("[VTM Builder] Wiring core system components...");
+            
+            GameObject systemsRoot = new GameObject("Systems");
+            
+            // Create VTM Controller
+            GameObject vtmController = new GameObject("VTMController");
+            vtmController.transform.SetParent(systemsRoot.transform);
+            
+            // Note: Core system components will be added when scripts are available
+            Debug.Log("[VTM Builder] VTMController created - core system components to be added when UdonSharp scripts are available");
+            
+            // Create Networked Profiles container
+            GameObject networkedProfiles = new GameObject("NetworkedProfiles");
+            networkedProfiles.transform.SetParent(systemsRoot.transform);
+            
+            for (int i = 1; i <= 30; i++)
+            {
+                GameObject profile = new GameObject($"PlayerProfile_{i:00}");
+                profile.transform.SetParent(networkedProfiles.transform);
+                // PublicProfilePublisher component to be added when available
+            }
+            
+            Debug.Log("[VTM Builder] Systems architecture created with 30 networked profile slots");
+        }
+
+        // UI Helper Methods
+        static GameObject CreateUIPanel(Transform parent, string name, Vector2 size, Vector2 position)
+        {
+            GameObject panel = new GameObject(name);
+            panel.transform.SetParent(parent);
+            
+            RectTransform rectTransform = panel.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = size;
+            rectTransform.anchoredPosition = position;
+            
+            Image image = panel.AddComponent<Image>();
+            image.color = new Color(0.1f, 0.1f, 0.1f, 0.8f); // Dark semi-transparent
+            
+            return panel;
+        }
+        
+        static GameObject CreateUIButton(Transform parent, string name, string text, Vector2 position, Vector2 size)
+        {
+            GameObject button = new GameObject(name);
+            button.transform.SetParent(parent);
+            
+            RectTransform rectTransform = button.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = size;
+            rectTransform.anchoredPosition = position;
+            
+            Image image = button.AddComponent<Image>();
+            image.color = new Color(0.2f, 0.6f, 1f, 1f); // Blue button
+            
+            Button buttonComponent = button.AddComponent<Button>();
+            
+            // Button text
+            GameObject textObj = new GameObject("Text");
+            textObj.transform.SetParent(button.transform);
+            
+            RectTransform textRT = textObj.AddComponent<RectTransform>();
+            textRT.sizeDelta = size;
+            textRT.anchoredPosition = Vector2.zero;
+            
+            TextMeshProUGUI textComponent = textObj.AddComponent<TextMeshProUGUI>();
+            textComponent.text = text;
+            textComponent.fontSize = 18;
+            textComponent.alignment = TextAlignmentOptions.Center;
+            textComponent.color = Color.white;
+            
+            return button;
+        }
+        
+        static GameObject CreateUIText(Transform parent, string name, string text, Vector2 position, Vector2 size)
+        {
+            GameObject textObj = new GameObject(name);
+            textObj.transform.SetParent(parent);
+            
+            RectTransform rectTransform = textObj.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = size;
+            rectTransform.anchoredPosition = position;
+            
+            TextMeshProUGUI textComponent = textObj.AddComponent<TextMeshProUGUI>();
+            textComponent.text = text;
+            textComponent.fontSize = 20;
+            textComponent.alignment = TextAlignmentOptions.Center;
+            textComponent.color = Color.white;
+            
+            return textObj;
+        }
+        
+        static GameObject CreateUIToggle(Transform parent, string name, string labelText, Vector2 position)
+        {
+            GameObject toggle = new GameObject(name);
+            toggle.transform.SetParent(parent);
+            
+            RectTransform rectTransform = toggle.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(300, 30);
+            rectTransform.anchoredPosition = position;
+            
+            Toggle toggleComponent = toggle.AddComponent<Toggle>();
+            
+            // Background
+            GameObject background = new GameObject("Background");
+            background.transform.SetParent(toggle.transform);
+            RectTransform bgRT = background.AddComponent<RectTransform>();
+            bgRT.sizeDelta = new Vector2(20, 20);
+            bgRT.anchoredPosition = new Vector2(-100, 0);
+            background.AddComponent<Image>().color = Color.white;
+            
+            // Checkmark
+            GameObject checkmark = new GameObject("Checkmark");
+            checkmark.transform.SetParent(background.transform);
+            RectTransform checkRT = checkmark.AddComponent<RectTransform>();
+            checkRT.sizeDelta = new Vector2(16, 16);
+            checkRT.anchoredPosition = Vector2.zero;
+            checkmark.AddComponent<Image>().color = Color.green;
+            
+            toggleComponent.targetGraphic = background.GetComponent<Image>();
+            toggleComponent.graphic = checkmark.GetComponent<Image>();
+            
+            // Label
+            CreateUIText(toggle.transform, "Label", labelText, new Vector2(50, 0), new Vector2(200, 30));
+            
+            return toggle;
+        }
+
+        // Material and Optimization Methods
+
+        [MenuItem("VTM/Setup Materials")]
+        public static void SetupMaterials()
+        {
+            Debug.Log("[VTM Builder] Setting up materials and assets...");
+            
+            try
+            {
+                EnsureDirectoryStructure();
+                CreateBasicMaterials();
+                ApplyMaterialsToEnvironment();
+                SetupAudioSources();
+                
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                
+                Debug.Log("[VTM Builder] Materials setup completed successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] Materials setup failed: {e.Message}");
+            }
+        }
+
+        static void CreateBasicMaterials()
+        {
+            Debug.Log("[VTM Builder] Creating basic materials...");
+            
+            // Create Materials folder if it doesn't exist
+            if (!AssetDatabase.IsValidFolder(MATERIALS_PATH))
+            {
+                AssetDatabase.CreateFolder("Assets/VirtualTokyoMatching", "Materials");
+            }
+            
+            // Lobby floor material - warm, welcoming
+            Material lobbyFloorMaterial = new Material(Shader.Find("Standard"));
+            lobbyFloorMaterial.name = "LobbyFloor";
+            lobbyFloorMaterial.color = new Color(0.85f, 0.8f, 0.9f); // Light purple-grey
+            lobbyFloorMaterial.metallic = 0.1f;
+            lobbyFloorMaterial.smoothness = 0.4f;
+            AssetDatabase.CreateAsset(lobbyFloorMaterial, $"{MATERIALS_PATH}/LobbyFloor.mat");
+            
+            // Wall material - neutral, clean
+            Material wallMaterial = new Material(Shader.Find("Standard"));
+            wallMaterial.name = "Wall";
+            wallMaterial.color = new Color(0.95f, 0.95f, 0.9f); // Off-white
+            wallMaterial.metallic = 0.0f;
+            wallMaterial.smoothness = 0.2f;
+            AssetDatabase.CreateAsset(wallMaterial, $"{MATERIALS_PATH}/Wall.mat");
+            
+            // Room floor material - warmer for intimacy
+            Material roomFloorMaterial = new Material(Shader.Find("Standard"));
+            roomFloorMaterial.name = "RoomFloor";
+            roomFloorMaterial.color = new Color(0.75f, 0.65f, 0.55f); // Warm brown
+            roomFloorMaterial.metallic = 0.0f;
+            roomFloorMaterial.smoothness = 0.5f;
+            AssetDatabase.CreateAsset(roomFloorMaterial, $"{MATERIALS_PATH}/RoomFloor.mat");
+            
+            // Furniture material - comfortable appearance
+            Material furnitureMaterial = new Material(Shader.Find("Standard"));
+            furnitureMaterial.name = "Furniture";
+            furnitureMaterial.color = new Color(0.4f, 0.3f, 0.2f); // Dark wood
+            furnitureMaterial.metallic = 0.0f;
+            furnitureMaterial.smoothness = 0.6f;
+            AssetDatabase.CreateAsset(furnitureMaterial, $"{MATERIALS_PATH}/Furniture.mat");
+            
+            // Ceiling material
+            Material ceilingMaterial = new Material(Shader.Find("Standard"));
+            ceilingMaterial.name = "Ceiling";
+            ceilingMaterial.color = new Color(0.9f, 0.9f, 0.85f); // Light cream
+            ceilingMaterial.metallic = 0.0f;
+            ceilingMaterial.smoothness = 0.1f;
+            AssetDatabase.CreateAsset(ceilingMaterial, $"{MATERIALS_PATH}/Ceiling.mat");
+            
+            Debug.Log("[VTM Builder] Created 5 basic materials");
+        }
+
+        static void ApplyMaterialsToEnvironment()
+        {
+            Debug.Log("[VTM Builder] Applying materials to environment objects...");
+            
+            // Load materials
+            Material lobbyFloorMat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/LobbyFloor.mat");
+            Material wallMat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/Wall.mat");
+            Material roomFloorMat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/RoomFloor.mat");
+            Material furnitureMat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/Furniture.mat");
+            Material ceilingMat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/Ceiling.mat");
+            
+            // Apply materials by tag
+            ApplyMaterialByTag("Floor", lobbyFloorMat);
+            ApplyMaterialByTag("Wall", wallMat);
+            ApplyMaterialByTag("RoomFloor", roomFloorMat);
+            ApplyMaterialByTag("Furniture", furnitureMat);
+            ApplyMaterialByName("LobbyCeiling", ceilingMat);
+            
+            Debug.Log("[VTM Builder] Materials applied to environment objects");
+        }
+
+        static void ApplyMaterialByTag(string tag, Material material)
+        {
+            if (material == null) return;
+            
+            GameObject[] objects = GameObject.FindGameObjectsWithTag(tag);
+            foreach (GameObject obj in objects)
+            {
+                Renderer renderer = obj.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.material = material;
+                }
+            }
+        }
+
+        static void ApplyMaterialByName(string name, Material material)
+        {
+            if (material == null) return;
+            
+            GameObject obj = GameObject.Find(name);
+            if (obj != null)
+            {
+                Renderer renderer = obj.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.material = material;
+                }
+            }
+        }
+
+        static void SetupAudioSources()
+        {
+            Debug.Log("[VTM Builder] Setting up audio sources...");
+            
+            GameObject audioRoot = new GameObject("Audio");
+            
+            // Lobby ambient audio
+            GameObject lobbyAmbient = new GameObject("LobbyAmbientAudio");
+            lobbyAmbient.transform.SetParent(audioRoot.transform);
+            lobbyAmbient.transform.position = new Vector3(0, 2, 0);
+            
+            AudioSource lobbySource = lobbyAmbient.AddComponent<AudioSource>();
+            lobbySource.loop = true;
+            lobbySource.volume = 0.3f;
+            lobbySource.spatialBlend = 0.7f; // 3D sound
+            lobbySource.rolloffMode = AudioRolloffMode.Linear;
+            lobbySource.maxDistance = 15f;
+            
+            // Session room ambient audio for each room
+            for (int i = 1; i <= 3; i++)
+            {
+                Vector3 roomPosition = new Vector3(
+                    25 * Mathf.Cos(i * Mathf.PI * 2 / 3),
+                    2,
+                    25 * Mathf.Sin(i * Mathf.PI * 2 / 3)
+                );
+                
+                GameObject roomAmbient = new GameObject($"Room{i:00}_AmbientAudio");
+                roomAmbient.transform.SetParent(audioRoot.transform);
+                roomAmbient.transform.position = roomPosition;
+                
+                AudioSource roomSource = roomAmbient.AddComponent<AudioSource>();
+                roomSource.loop = true;
+                roomSource.volume = 0.2f;
+                roomSource.spatialBlend = 1.0f; // Full 3D
+                roomSource.rolloffMode = AudioRolloffMode.Linear;
+                roomSource.maxDistance = 8f;
+            }
+            
+            Debug.Log("[VTM Builder] Audio system configured with 4 ambient sources");
+        }
+
+        [MenuItem("VTM/Optimize For VRChat")]
+        public static void OptimizeForVRChat()
+        {
+            Debug.Log("[VTM Builder] Applying VRChat optimizations...");
+            
+            try
+            {
+                SetEnvironmentStatic();
+                ConfigureRenderingSettings();
+                OptimizeLightingSettings();
+                SetupCollisionLayers();
+                CreateOcclusionCulling();
+                
+                Debug.Log("[VTM Builder] VRChat optimizations applied successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] VRChat optimization failed: {e.Message}");
+            }
+        }
+
+        static void SetEnvironmentStatic()
+        {
+            Debug.Log("[VTM Builder] Setting environment objects to static...");
+            
+            // Find environment objects and set them static for lightmap baking
+            GameObject environment = GameObject.Find("Environment");
+            if (environment != null)
+            {
+                SetStaticRecursive(environment.transform);
+            }
+            
+            // Set spawn markers as non-static (they should be disabled in final build)
+            GameObject[] spawnMarkers = GameObject.FindGameObjectsWithTag("SpawnMarker");
+            foreach (GameObject marker in spawnMarkers)
+            {
+                GameObjectUtility.SetStaticEditorFlags(marker, StaticEditorFlags.Nothing);
+            }
+            
+            Debug.Log("[VTM Builder] Environment objects configured for static batching and lightmap baking");
+        }
+
+        static void SetStaticRecursive(Transform transform)
+        {
+            // Set appropriate static flags for VRChat optimization
+            StaticEditorFlags flags = StaticEditorFlags.LightmapStatic | 
+                                    StaticEditorFlags.OccluderStatic | 
+                                    StaticEditorFlags.BatchingStatic |
+                                    StaticEditorFlags.NavigationStatic |
+                                    StaticEditorFlags.OccludeeStatic;
+            
+            GameObjectUtility.SetStaticEditorFlags(transform.gameObject, flags);
+            
+            foreach (Transform child in transform)
+            {
+                // Don't set UI or spawn points as static
+                if (!child.name.Contains("UI") && !child.name.Contains("Spawn"))
+                {
+                    SetStaticRecursive(child);
+                }
+            }
+        }
+
+        static void ConfigureRenderingSettings()
+        {
+            Debug.Log("[VTM Builder] Configuring rendering settings for performance...");
+            
+            // Set rendering tier for Quest compatibility
+            Graphics.activeTier = GraphicsTier.Tier2; // Mid-tier for Quest support
+            
+            // Configure quality settings
+            QualitySettings.shadowCascades = 1; // Single shadow cascade for performance
+            QualitySettings.shadowDistance = 20f; // Limit shadow distance
+            QualitySettings.shadowResolution = ShadowResolution.Medium;
+            QualitySettings.shadowProjection = ShadowProjection.StableFit;
+            
+            // Optimize render settings
+            QualitySettings.pixelLightCount = 2; // Limit pixel lights
+            QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
+            QualitySettings.antiAliasing = 2; // 2x MSAA for balance
+            QualitySettings.realtimeReflectionProbes = false; // Disable for performance
+            
+            Debug.Log("[VTM Builder] Rendering settings optimized for VRChat");
+        }
+
+        static void OptimizeLightingSettings()
+        {
+            Debug.Log("[VTM Builder] Optimizing lighting settings...");
+            
+            // Configure lightmap settings for Quest performance
+            var lightmapSettings = new SerializedObject(LightmapEditorSettings.GetLightmapSettings());
+            lightmapSettings.FindProperty("m_LightmapEditorSettings.m_Resolution").floatValue = 10f; // Lower resolution
+            lightmapSettings.FindProperty("m_LightmapEditorSettings.m_BakeResolution").floatValue = 20f;
+            lightmapSettings.FindProperty("m_LightmapEditorSettings.m_TextureWidth").intValue = 1024;
+            lightmapSettings.FindProperty("m_LightmapEditorSettings.m_TextureHeight").intValue = 1024;
+            lightmapSettings.FindProperty("m_LightmapEditorSettings.m_CompressLightmaps").boolValue = true;
+            lightmapSettings.ApplyModifiedProperties();
+            
+            // Set ambient lighting for Quest performance
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientIntensity = 0.8f;
+            
+            // Optimize fog settings
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 30f;
+            RenderSettings.fogEndDistance = 80f;
+            RenderSettings.fogColor = new Color(0.5f, 0.5f, 0.6f, 1f);
+            
+            Debug.Log("[VTM Builder] Lighting settings optimized for performance");
+        }
+
+        static void SetupCollisionLayers()
+        {
+            Debug.Log("[VTM Builder] Setting up collision layers...");
+            
+            // Note: This would typically involve configuring Physics collision matrix
+            // For now, just ensure proper layer assignments
+            
+            // Environment objects
+            SetLayerRecursive(GameObject.Find("Environment"), LayerMask.NameToLayer("Default"));
+            
+            // UI objects
+            GameObject uiRoot = GameObject.Find("UI");
+            if (uiRoot != null)
+            {
+                SetLayerRecursive(uiRoot, LayerMask.NameToLayer("UI"));
+            }
+            
+            Debug.Log("[VTM Builder] Collision layers configured");
+        }
+
+        static void SetLayerRecursive(GameObject obj, int layer)
+        {
+            if (obj == null) return;
+            
+            obj.layer = layer;
+            foreach (Transform child in obj.transform)
+            {
+                SetLayerRecursive(child.gameObject, layer);
+            }
+        }
+
+        static void CreateOcclusionCulling()
+        {
+            Debug.Log("[VTM Builder] Setting up occlusion culling...");
+            
+            // Create occlusion areas for session rooms to improve performance
+            for (int i = 1; i <= 3; i++)
+            {
+                GameObject room = GameObject.Find($"Room{i:00}");
+                if (room != null)
+                {
+                    GameObject occlusionArea = new GameObject($"Room{i:00}_OcclusionArea");
+                    occlusionArea.transform.SetParent(room.transform);
+                    occlusionArea.transform.localPosition = Vector3.zero;
+                    
+                    OcclusionArea area = occlusionArea.AddComponent<OcclusionArea>();
+                    area.size = new Vector3(12f, 6f, 12f); // Slightly larger than room
+                }
+            }
+            
+            Debug.Log("[VTM Builder] Occlusion culling areas created for session rooms");
+        }
+
+        // Validation Method
+        [MenuItem("VTM/Validate Scene Setup")]
+        public static void ValidateSceneSetup()
+        {
+            Debug.Log("[VTM Builder] Starting scene validation...");
+            
+            int issues = 0;
+            
+            // Check required GameObjects
+            issues += ValidateGameObject("Environment", "Root environment object");
+            issues += ValidateGameObject("Lighting", "Lighting system");
+            issues += ValidateGameObject("SpawnSystem", "Spawn point system");
+            issues += ValidateGameObject("UI", "UI system");
+            issues += ValidateGameObject("Systems", "Core systems");
+            
+            // Check specific components
+            issues += ValidateSpawnPoints();
+            issues += ValidateRoomStructure();
+            issues += ValidateUIStructure();
+            issues += ValidateMaterials();
+            
+            if (issues == 0)
+            {
+                Debug.Log("[VTM Builder] ✅ Scene validation passed! No issues found.");
+            }
+            else
+            {
+                Debug.LogWarning($"[VTM Builder] ⚠️ Scene validation found {issues} issues. Check logs for details.");
+            }
+        }
+
+        static int ValidateGameObject(string name, string description)
+        {
+            GameObject obj = GameObject.Find(name);
+            if (obj == null)
+            {
+                Debug.LogWarning($"[VTM Validation] Missing {description}: {name}");
+                return 1;
+            }
+            Debug.Log($"[VTM Validation] ✅ Found {description}: {name}");
+            return 0;
+        }
+
+        static int ValidateSpawnPoints()
+        {
+            GameObject spawnSystem = GameObject.Find("SpawnSystem");
+            if (spawnSystem == null) return 1;
+            
+            int spawnCount = 0;
+            foreach (Transform child in spawnSystem.transform)
+            {
+                if (child.name.Contains("Spawn"))
+                {
+                    spawnCount++;
+                }
+            }
+            
+            if (spawnCount < 8)
+            {
+                Debug.LogWarning($"[VTM Validation] Insufficient spawn points: {spawnCount} (expected at least 8)");
+                return 1;
+            }
+            
+            Debug.Log($"[VTM Validation] ✅ Spawn points validated: {spawnCount} found");
+            return 0;
+        }
+
+        static int ValidateRoomStructure()
+        {
+            int issues = 0;
+            for (int i = 1; i <= 3; i++)
+            {
+                GameObject room = GameObject.Find($"Room{i:00}");
+                if (room == null)
+                {
+                    Debug.LogWarning($"[VTM Validation] Missing session room: Room{i:00}");
+                    issues++;
+                }
+            }
+            
+            if (issues == 0)
+            {
+                Debug.Log("[VTM Validation] ✅ All 3 session rooms validated");
+            }
+            
+            return issues;
+        }
+
+        static int ValidateUIStructure()
+        {
+            string[] expectedCanvases = { "MainLobbyCanvas", "AssessmentCanvas", "RecommenderCanvas", "SafetyCanvas" };
+            int issues = 0;
+            
+            foreach (string canvasName in expectedCanvases)
+            {
+                GameObject canvas = GameObject.Find(canvasName);
+                if (canvas == null)
+                {
+                    Debug.LogWarning($"[VTM Validation] Missing UI canvas: {canvasName}");
+                    issues++;
+                }
+                else if (canvas.GetComponent<Canvas>() == null)
+                {
+                    Debug.LogWarning($"[VTM Validation] Canvas component missing on: {canvasName}");
+                    issues++;
+                }
+            }
+            
+            if (issues == 0)
+            {
+                Debug.Log("[VTM Validation] ✅ All 4 UI canvases validated");
+            }
+            
+            return issues;
+        }
+
+        static int ValidateMaterials()
+        {
+            string[] expectedMaterials = { "LobbyFloor.mat", "Wall.mat", "RoomFloor.mat", "Furniture.mat", "Ceiling.mat" };
+            int issues = 0;
+            
+            foreach (string materialName in expectedMaterials)
+            {
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>($"{MATERIALS_PATH}/{materialName}");
+                if (mat == null)
+                {
+                    Debug.LogWarning($"[VTM Validation] Missing material: {materialName}");
+                    issues++;
+                }
+            }
+            
+            if (issues == 0)
+            {
+                Debug.Log("[VTM Validation] ✅ All 5 materials validated");
+            }
+            
+            return issues;
+        }
+    }
+}
