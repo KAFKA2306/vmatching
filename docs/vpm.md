@@ -1,112 +1,145 @@
-# Ubuntu 22.04での VPM CLI完全ガイド - VRChatワールド開発環境構築
+# Ubuntu 22.04での VCC/VPM CLI完全ガイド - VRChatワールド開発環境構築とトラブルシューティング
 
 ## 概要
 
-Ubuntu 22.04環境での**VRChat Package Manager (VPM) CLI**を使用したVRChatワールド開発環境の完全構築ガイドです。**VirtualTokyoMatching**プロジェクト（112問性格診断ベースのリアルタイムマッチングシステム）の実装を通じて、実用的な開発環境を構築します。
+Ubuntu 22.04環境での**VRChat Package Manager (VPM) CLI**を使用したVRChatワールド開発環境の完全構築ガイドです。**VirtualTokyoMatching**プロジェクト（112問性格診断ベースのリアルタイムマッチングシステム）の実装を通じて、実際のエラーケースとその解決方法を網羅的に解説します。
 
-## 前提条件
+## エラー分析と根本原因
 
-- **OS**: Ubuntu 22.04 LTS (WSL2も対応)
-- **.NET SDK**: 8.0以上
-- **Unity Hub**: インストール済み
-- **Unity Editor**: 2022.3 LTS系 (VRChat推奨版)
-- **ネットワーク**: インターネット接続 (パッケージダウンロード用)
+### 主要エラーの分類
 
-## Linux環境での重要な制限事項
-
-### ✅ 動作する機能
-- VPM CLI基本操作 (`vpm --version`, `vpm list repos`)
-- Unity Hub認識 (`vpm check hub`)
-- VRChatリポジトリアクセス (公式・キュレーテッド)
-- プロジェクト作成・パッケージ管理
-- 依存関係解決
-
-### ❌ 制限のある機能
-- **Unity Editor自動検出**: Linux未対応（手動設定必須）
-- **GUI VCC**: Windows専用
-- **完全自動セットアップ**: 一部手動設定が必要
-
-## Phase 1: 基本環境構築
-
-### 1.1 .NET SDK確認・インストール
-
+#### 1. VPMコマンド構文エラー
 ```bash
-# .NET SDKのバージョン確認
-dotnet --version
-dotnet --list-sdks
+# ❌ 間違った形式
+vpm add com.vrchat.udonsharp
+# エラー: Required command was not provided
 
-# .NET 8.0がない場合の最新インストール
-sudo apt update
-sudo apt install -y dotnet-sdk-8.0
+# ✅ 正しい形式  
+vpm add package com.vrchat.udonsharp -p .
 ```
 
-### 1.2 VPM CLI初期導入
+**失敗理由**: VPMコマンドには`package`サブコマンドが必須で、プロジェクトパス指定(`-p .`)も必要
 
+#### 2. settings.json構文エラー
 ```bash
-# VPM CLIをグローバルインストール
+# 典型的エラー出力
+[ERR] Failed to load settings! Unexpected character encountered while parsing value: {. 
+Path 'unityEditors', line 6, position 5.
+```
+
+**失敗理由**: 
+- JSON構造の破損（中括弧・クォートの不整合）
+- `cat`コマンドでのEOFマーカー処理失敗
+- `unityEditors`フィールドの形式違い（配列 vs オブジェクト）
+
+#### 3. プロジェクト認識エラー
+```bash
+# エラー例
+Project version not found
+Can't load project manifest ./Packages/manifest.json
+```
+
+**失敗理由**: プロジェクトルート以外のディレクトリでVPMコマンドを実行
+
+#### 4. Unity Editor検出エラー
+```bash
+# Linux特有の制限
+Found No Supported Editors  
+Unity is not installed
+```
+
+**失敗理由**: Linux環境でのUnity自動検出機能未対応（既知の制限事項）
+
+## 段階別解決手順
+
+### Phase 1: 基本環境構築
+
+#### 1.1 前提条件確認
+```bash
+# .NET SDK確認
+dotnet --version
+dotnet --list-sdks
+# 必要: .NET 8.0以上
+
+# Unity環境確認
+which unityhub
+find ~/Unity/Hub/Editor -name "Unity" -type f 2>/dev/null
+
+# 期待する出力例
+# /usr/bin/unityhub
+# /home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity
+```
+
+#### 1.2 VPM CLI基本セットアップ
+```bash
+# VPM CLI完全リセット（問題がある場合）
+dotnet tool uninstall --global vrchat.vpm.cli
+rm -rf ~/.dotnet/tools/.store/vrchat.vpm.cli
+
+# 新規インストール
 dotnet tool install --global vrchat.vpm.cli
 
 # バージョン確認
 vpm --version
 # 期待する出力: 0.1.28+ハッシュ
+```
 
-# テンプレートとリポジトリの初期化
+#### 1.3 初期テンプレート導入
+```bash
+# 設定フォルダの完全リセット（必要に応じて）
+rm -rf ~/.local/share/VRChatCreatorCompanion
+
+# テンプレート導入
 vpm install templates
 
-# リポジトリアクセス確認
+# 導入確認
 vpm list repos
 # 期待する出力:
 # com.vrchat.repos.official | Official (VRChat)
 # com.vrchat.repos.curated | Curated (VRChat)
 ```
 
-### 1.3 Unity環境の確認
+### Phase 2: settings.json完全設定
 
+#### 2.1 問題のあるsettings.jsonの診断
 ```bash
-# Unity Hubの場所確認
-which unityhub
-find /opt -name "unityhub" 2>/dev/null
+# 現在のファイル内容確認
+cat ~/.local/share/VRChatCreatorCompanion/settings.json
 
-# Unity Editorの場所確認
-find ~/Unity/Hub/Editor -name "Unity" -type f 2>/dev/null
-
-# 実行可能性テスト
-~/Unity/Hub/Editor/2022.3.22f1/Editor/Unity --version
+# JSON構文チェック
+python3 -m json.tool ~/.local/share/VRChatCreatorCompanion/settings.json
 ```
 
-**期待する出力例**:
-```
-/usr/bin/unityhub
-/home/username/Unity/Hub/Editor/2022.3.22f1/Editor/Unity
-2022.3.22f1
-```
-
-## Phase 2: VPM設定の完全構築
-
-### 2.1 settings.json設定（重要）
-
-Linux環境では`settings.json`の手動設定が**必須**です：
-
+#### 2.2 正しいsettings.json作成（完全版）
 ```bash
-# 設定ファイルの場所確認
-ls -la ~/.local/share/VRChatCreatorCompanion/settings.json
+# 既存ファイルのバックアップ
+cp ~/.local/share/VRChatCreatorCompanion/settings.json{,.backup.$(date +%Y%m%d_%H%M%S)}
 
-# 正しいsettings.jsonの作成
-cat > ~/.local/share/VRChatCreatorCompanion/settings.json << 'EOF'
+# 実際のパスを取得
+UNITY_HUB_PATH=$(which unityhub)
+UNITY_EDITOR_PATH=$(find ~/Unity/Hub/Editor -name "Unity" -type f 2>/dev/null | head -1)
+UNITY_VERSION=$(basename $(dirname $(dirname $UNITY_EDITOR_PATH)))
+
+echo "Unity Hub: $UNITY_HUB_PATH"
+echo "Unity Editor: $UNITY_EDITOR_PATH"  
+echo "Unity Version: $UNITY_VERSION"
+
+# 動的settings.json生成
+cat > ~/.local/share/VRChatCreatorCompanion/settings.json << EOF
 {
-  "pathToUnityHub": "/usr/bin/unityhub",
-  "pathToUnityExe": "/home/USERNAME/Unity/Hub/Editor/2022.3.22f1/Editor/Unity",
+  "pathToUnityHub": "$UNITY_HUB_PATH",
+  "pathToUnityExe": "$UNITY_EDITOR_PATH",
   "userProjects": [],
   "unityEditors": [
     {
-      "version": "2022.3.22f1",
-      "path": "/home/USERNAME/Unity/Hub/Editor/2022.3.22f1/Editor/Unity"
+      "version": "$UNITY_VERSION",
+      "path": "$UNITY_EDITOR_PATH"
     }
   ],
   "preferredUnityEditors": {
-    "2022.3": "2022.3.22f1"
+    "${UNITY_VERSION%.*}": "$UNITY_VERSION"
   },
-  "defaultProjectPath": "/home/USERNAME/projects",
+  "defaultProjectPath": "/home/$USER/projects",
   "lastUIState": 0,
   "skipUnityAutoFind": false,
   "userPackageFolders": [],
@@ -117,9 +150,9 @@ cat > ~/.local/share/VRChatCreatorCompanion/settings.json << 'EOF'
     "y": 0
   },
   "skipRequirements": false,
-  "lastNewsUpdate": "2025-08-25T11:56:00.000Z",
+  "lastNewsUpdate": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
   "allowPii": false,
-  "projectBackupPath": "/home/USERNAME/.local/share/VRChatCreatorCompanion/ProjectBackups",
+  "projectBackupPath": "/home/$USER/.local/share/VRChatCreatorCompanion/ProjectBackups",
   "showPrereleasePackages": false,
   "trackCommunityRepos": true,
   "selectedProviders": 3,
@@ -127,137 +160,159 @@ cat > ~/.local/share/VRChatCreatorCompanion/settings.json << 'EOF'
 }
 EOF
 
-# USERNAMEを実際のユーザー名に置換
-sed -i "s/USERNAME/$USER/g" ~/.local/share/VRChatCreatorCompanion/settings.json
-
 # ファイル権限設定
 chmod 644 ~/.local/share/VRChatCreatorCompanion/settings.json
 ```
 
-### 2.2 設定の検証
-
+#### 2.3 設定検証
 ```bash
-# JSON構文の確認
-python3 -m json.tool ~/.local/share/VRChatCreatorCompanion/settings.json
+# JSON構文確認
+python3 -m json.tool ~/.local/share/VRChatCreatorCompanion/settings.json >/dev/null && echo "JSON OK" || echo "JSON ERROR"
 
 # VPM動作確認
 vpm --version
-vpm check hub
 vpm list repos
-
-# Unity認識確認（Linuxでは制限あり）
-vpm list unity
-vpm check unity
+vpm check hub
+vpm list unity  # Unity認識は制限ありでも問題なし
 ```
 
-**期待する結果**:
-- `vpm check hub`: Unity Hubパスが表示される
-- `vpm list repos`: 公式・キュレーテッドリポジトリが表示される
-- `vpm list unity`: Unity Editorが認識される（または空のテーブル）
+### Phase 3: プロジェクト作成と管理
 
-## Phase 3: VirtualTokyoMatchingプロジェクト作成
-
-### 3.1 新規プロジェクト作成
-
+#### 3.1 VirtualTokyoMatchingプロジェクト作成
 ```bash
-# プロジェクト作成ディレクトリの準備
+# プロジェクトディレクトリ準備
 mkdir -p ~/projects
 
-# VRChatワールドプロジェクトの新規作成
+# VRChatワールドプロジェクト新規作成
 vpm new VirtualTokyoMatching World -p ~/projects
 
-# プロジェクトディレクトリに移動
+# 作成確認
+cd ~/projects/VirtualTokyoMatching
+ls -la
+# 期待するファイル: Assets/, Packages/, ProjectSettings/, etc.
+
+# プロジェクト状態確認
+vpm check project .
+# 期待する出力: Project is WorldVPM
+```
+
+#### 3.2 パッケージ追加（正しい手順）
+```bash
+# 必須パッケージの段階的追加
 cd ~/projects/VirtualTokyoMatching
 
-# プロジェクト状態の確認
-vpm check project .
-```
-
-**期待する出力**:
-```
-Project is WorldVPM
-```
-
-### 3.2 必須パッケージの追加
-
-```bash
-# VRChat Worlds SDK（基本パッケージ）
+# 1. VRChat Worlds SDK（基本）
 vpm add package com.vrchat.worlds -p .
+echo "VRChat Worlds SDK追加完了"
 
-# UdonSharp（スクリプティング）
+# 2. UdonSharp（スクリプティング）
 vpm add package com.vrchat.udonsharp -p .
+echo "UdonSharp追加完了"
 
-# ClientSim（テスト用）
+# 3. ClientSim（テスト用）
 vpm add package com.vrchat.clientsim -p .
+echo "ClientSim追加完了"
 
-# 依存関係の解決
+# 依存関係解決
 vpm resolve project .
 
-# 追加されたパッケージの確認
+# 追加されたパッケージ確認
 vpm list packages -p .
 ```
 
-### 3.3 パッケージ互換性問題の対処
-
+#### 3.3 互換性問題対処法
 ```bash
-# 互換性エラーが発生した場合の対処法
+# パッケージ互換性エラーが発生した場合
 
-# 1. 特定バージョンでの追加
+# エラー例:
+# Couldn't add com.vrchat.udonsharp@1.1.9 to target project. It is incompatible
+
+# 解決方法1: 特定バージョン指定
 vpm add package com.vrchat.udonsharp@1.1.8 -p .
 vpm add package com.vrchat.clientsim@1.2.6 -p .
 
-# 2. プロジェクトの再解決
+# 解決方法2: テンプレート更新
+vpm install templates
 vpm resolve project .
 
-# 3. キャッシュクリア（必要に応じて）
-rm -rf ~/.local/share/VRChatCreatorCompanion/Packages
-vpm install templates
+# 解決方法3: 段階的追加
+vpm add package com.vrchat.worlds -p .
+vpm resolve project .
+vpm add package com.vrchat.udonsharp -p .
+vpm resolve project .
+vpm add package com.vrchat.clientsim -p .
+vpm resolve project .
 ```
 
-## Phase 4: Unity統合・開発環境完成
+### Phase 4: Unity統合
 
-### 4.1 Unity Hubでプロジェクトを開く
-
+#### 4.1 Unity Hubでプロジェクト開く
 ```bash
-# Unity Hubを起動（GUIモード）
+# Unity Hubをバックグラウンド起動
 /usr/bin/unityhub -- --projectPath ~/projects/VirtualTokyoMatching &
 
-# または、Unity Hubを起動してGUIで追加：
-# 1. Unity Hub → Projects → Add → ~/projects/VirtualTokyoMatching
-# 2. Unity 2022.3.22f1で開く
+# プロセス確認
+ps aux | grep unityhub
 ```
 
-### 4.2 手動パッケージ追加（VPMが失敗する場合）
-
+#### 4.2 手動パッケージ追加（フォールバック）
 Unity Editor内で以下を実行：
 
 ```csharp
 // Window → Package Manager → + → Add package from git URL
 
-// VRChat Worlds SDK
+// 1. VRChat Worlds SDK
 https://github.com/vrchat/packages.git?path=/packages/com.vrchat.worlds
 
-// UdonSharp
+// 2. UdonSharp  
 https://github.com/vrchat/packages.git?path=/packages/com.vrchat.udonsharp
 
-// ClientSim
+// 3. ClientSim
 https://github.com/vrchat/packages.git?path=/packages/com.vrchat.clientsim
 ```
 
-### 4.3 VirtualTokyoMatchingプロジェクト構造
+## VirtualTokyoMatchingプロジェクト構造
 
+### 完全なフォルダ構成
 ```
 Assets/VirtualTokyoMatching/
 ├── Scripts/
 │   ├── Core/                    # VTMController, PlayerDataManager
+│   │   ├── PlayerDataManager.cs
+│   │   ├── VTMController.cs
+│   │   └── EventSystem.cs
 │   ├── Assessment/              # 112問診断システム
+│   │   ├── DiagnosisController.cs
+│   │   ├── QuestionManager.cs
+│   │   └── ProgressTracker.cs
 │   ├── Vector/                  # 30D→6D変換・類似度計算
+│   │   ├── VectorBuilder.cs
+│   │   ├── DimensionReducer.cs
+│   │   └── SimilarityCalculator.cs
 │   ├── Matching/                # リアルタイム推薦
+│   │   ├── CompatibilityCalculator.cs
+│   │   ├── RecommendationEngine.cs
+│   │   └── MatchingAlgorithm.cs
 │   ├── UI/                      # ユーザーインターフェース
+│   │   ├── MainUIController.cs
+│   │   ├── RecommenderUI.cs
+│   │   └── AssessmentUI.cs
 │   ├── Safety/                  # プライバシー保護
+│   │   ├── SafetyController.cs
+│   │   ├── PrivacyManager.cs
+│   │   └── DataProtection.cs
 │   ├── Session/                 # 1on1個室管理
+│   │   ├── SessionRoomManager.cs
+│   │   ├── RoomController.cs
+│   │   └── TimerSystem.cs
 │   ├── Sync/                    # ネットワーク同期
+│   │   ├── PublicProfilePublisher.cs
+│   │   ├── NetworkSync.cs
+│   │   └── DataSynchronizer.cs
 │   └── Performance/             # パフォーマンス最適化
+│       ├── PerfGuard.cs
+│       ├── FrameRateOptimizer.cs
+│       └── MemoryManager.cs
 ├── ScriptableObjects/
 │   ├── QuestionDatabase.asset   # 112問・5択・軸マッピング
 │   ├── VectorConfiguration.asset # 30D→6D変換行列
@@ -267,202 +322,270 @@ Assets/VirtualTokyoMatching/
 │   └── VirtualTokyoMatching.unity
 ├── Prefabs/
 │   ├── UI/                      # UIプレファブ
+│   │   ├── MainLobbyCanvas.prefab
+│   │   ├── AssessmentUI.prefab
+│   │   ├── RecommenderCards.prefab
+│   │   └── SafetyPanel.prefab
 │   ├── SessionRooms/            # 個室プレファブ
-│   └── NetworkedProfiles/       # 同期プロファイル
-└── Resources/                   # 設定アセット
+│   │   ├── PrivateRoom01.prefab
+│   │   ├── PrivateRoom02.prefab
+│   │   └── PrivateRoom03.prefab
+│   └── Systems/                 # システムプレファブ
+│       ├── VTMController.prefab
+│       └── NetworkedProfiles.prefab
+├── Materials/                   # UI・環境マテリアル
+├── Textures/                    # テクスチャアセット
+├── Audio/                       # 音響効果
+└── Resources/                   # 設定アセット（ランタイムロード）
+    ├── DefaultPerformanceSettings.asset
+    ├── QuestionDatabase.asset
+    ├── VectorConfig.asset
+    └── SummaryTemplates.asset
 ```
 
-## Phase 5: トラブルシューティング
+## 高度なトラブルシューティング
 
-### 5.1 よくある問題と解決方法
-
-#### 問題1: VPM CLIが設定ファイルを読み込めない
-
-**エラー例**:
-```
-Failed to load settings! Please fix or delete your settings file
-Unexpected character encountered while parsing value
-```
-
-**解決方法**:
+### ケース1: 完全復旧手順
 ```bash
-# 設定ファイルを削除して再生成
-rm -f ~/.local/share/VRChatCreatorCompanion/settings.json
-vpm install templates
+# VPM環境の完全リセット
+#!/bin/bash
+echo "=== VPM環境完全リセット開始 ==="
 
-# 正しい設定ファイルを再作成（Phase 2.1を参照）
-```
-
-#### 問題2: Unity Editorが認識されない
-
-**エラー例**:
-```
-Found No Supported Editors
-Unity is not installed
-```
-
-**解決方法**:
-```bash
-# settings.jsonのunityEditorsセクションを確認
-cat ~/.local/share/VRChatCreatorCompanion/settings.json | grep -A 10 "unityEditors"
-
-# パスが正しいか確認
-ls -la /home/$USER/Unity/Hub/Editor/2022.3.22f1/Editor/Unity
-
-# 設定ファイルを修正（Phase 2.1参照）
-```
-
-#### 問題3: パッケージ追加時の互換性エラー
-
-**エラー例**:
-```
-Couldn't add com.vrchat.udonsharp@1.1.9 to target project. It is incompatible
-```
-
-**解決方法**:
-```bash
-# 互換性のあるバージョンを指定
-vpm add package com.vrchat.udonsharp@1.1.8 -p .
-
-# または Unity Editor内で手動追加
-# Window → Package Manager → Add package from git URL
-```
-
-### 5.2 設定ファイル破損時の完全復旧
-
-```bash
-# VPM設定の完全リセット
-rm -rf ~/.local/share/VRChatCreatorCompanion
-
-# VPM CLIの再インストール
+# 1. VPM CLI削除
 dotnet tool uninstall --global vrchat.vpm.cli
-dotnet tool install --global vrchat.vpm.cli
+rm -rf ~/.dotnet/tools/.store/vrchat.vpm.cli
 
-# 新しい設定の作成
+# 2. 設定フォルダバックアップ・削除
+if [ -d ~/.local/share/VRChatCreatorCompanion ]; then
+    cp -r ~/.local/share/VRChatCreatorCompanion ~/.local/share/VRChatCreatorCompanion.backup.$(date +%Y%m%d_%H%M%S)
+    rm -rf ~/.local/share/VRChatCreatorCompanion
+fi
+
+# 3. 新規インストール
+dotnet tool install --global vrchat.vpm.cli
 vpm install templates
 
-# 正しいsettings.jsonの設定（Phase 2.1参照）
+# 4. 設定確認
+vpm --version
+vpm list repos
+
+echo "=== リセット完了 ==="
 ```
 
-### 5.3 デバッグ・診断コマンド
-
+### ケース2: ネットワーク問題診断
 ```bash
-# VPM状態の完全診断
-echo "=== VPM CLI バージョン ==="
-vpm --version
+# VPMネットワーク接続確認
+#!/bin/bash
+echo "=== ネットワーク診断 ==="
 
-echo "=== .NET SDK 状態 ==="
-dotnet --version
-dotnet --list-sdks
+# 1. 基本接続確認
+ping -c 3 api.vrchat.cloud
+ping -c 3 packages.vrchat.com
 
-echo "=== Unity環境 ==="
-vpm check hub
-vpm check unity
-vpm list unity
+# 2. VRChatリポジトリアクセス確認
+curl -I https://packages.vrchat.com/
 
-echo "=== プロジェクト状態 ==="
+# 3. VPMリポジトリ状態確認
+vpm list repos
+
+# 4. パッケージリスト取得テスト
+timeout 30 vpm list packages --all
+
+echo "=== 診断完了 ==="
+```
+
+### ケース3: パフォーマンス問題対処
+```bash
+# システムリソース確認
+#!/bin/bash
+echo "=== システムリソース確認 ==="
+
+# メモリ使用量
+free -h
+
+# CPU使用率
+top -bn1 | grep "Cpu(s)"
+
+# ディスク容量
+df -h ~/.local/share/VRChatCreatorCompanion
+df -h ~/projects
+
+# .NET プロセス確認
+ps aux | grep dotnet
+
+echo "=== 確認完了 ==="
+```
+
+## 具体的エラーパターンと解決コード
+
+### エラーパターン1: JSON破損
+```bash
+# エラー出力例
+Failed to load settings! Unexpected character encountered while parsing value: {. Path 'unityEditors', line 8, position 5.
+
+# 診断コマンド
+cat ~/.local/share/VRChatCreatorCompanion/settings.json | head -20
+python3 -c "import json; json.load(open('/home/$USER/.local/share/VRChatCreatorCompanion/settings.json'))"
+
+# 解決コード
+cat > ~/.local/share/VRChatCreatorCompanion/settings.json << 'JSON_EOF'
+{
+  "pathToUnityHub": "/usr/bin/unityhub",
+  "pathToUnityExe": "/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity",
+  "userProjects": [],
+  "unityEditors": [
+    {
+      "version": "2022.3.22f1",
+      "path": "/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity"
+    }
+  ],
+  "preferredUnityEditors": {},
+  "defaultProjectPath": "/home/kafka/projects",
+  "lastUIState": 0,
+  "skipUnityAutoFind": false,
+  "userPackageFolders": [],
+  "windowSizeData": { "width": 0, "height": 0, "x": 0, "y": 0 },
+  "skipRequirements": false,
+  "lastNewsUpdate": "2025-08-25T11:58:00.000Z",
+  "allowPii": false,
+  "projectBackupPath": "/home/kafka/.local/share/VRChatCreatorCompanion/ProjectBackups",
+  "showPrereleasePackages": false,
+  "trackCommunityRepos": true,
+  "selectedProviders": 3,
+  "userRepos": []
+}
+JSON_EOF
+```
+
+### エラーパターン2: パッケージ追加失敗
+```bash
+# エラー出力例
+Couldn't add com.vrchat.udonsharp@1.1.9 to target project. It is incompatible
+
+# 診断コマンド
 cd ~/projects/VirtualTokyoMatching
 vpm check project .
 vpm list packages -p .
 
-echo "=== 設定ファイル確認 ==="
-ls -la ~/.local/share/VRChatCreatorCompanion/
-head -20 ~/.local/share/VRChatCreatorCompanion/settings.json
+# 解決コード（段階的追加）
+vpm add package com.vrchat.worlds -p .
+vpm resolve project .
+
+# 互換バージョンで再試行
+vpm add package com.vrchat.udonsharp@1.1.8 -p .
+vpm resolve project .
+
+vpm add package com.vrchat.clientsim@1.2.6 -p .
+vpm resolve project .
 ```
 
-## Phase 6: 代替アプローチ
-
-### 6.1 vrc-get（オープンソース代替）
-
-VPM CLIに問題がある場合の代替ツール：
-
+### エラーパターン3: Unity Hub認識失敗
 ```bash
-# Rustがインストールされている場合
+# エラー出力例
+Can only get Hub version on Windows and Mac so far...
+Found Unity Hub version  at /usr/bin/unityhub
+
+# これは正常（Linux制限）- 機能に支障なし
+
+# 確認コマンド
+which unityhub
+/usr/bin/unityhub --version
+
+# Unity起動テスト
+/usr/bin/unityhub -- --projectPath ~/projects/VirtualTokyoMatching
+```
+
+## 最適化とベストプラクティス
+
+### VPM操作のベストプラクティス
+```bash
+# 1. 常にプロジェクトルートで実行
+cd ~/projects/VirtualTokyoMatching
+pwd  # 確認
+
+# 2. -p . オプションを必ず付ける
+vpm add package com.vrchat.worlds -p .
+vpm check project .
+vpm resolve project .
+
+# 3. 段階的にパッケージ追加
+vpm add package com.vrchat.worlds -p .
+vpm resolve project .
+vpm add package com.vrchat.udonsharp -p .
+vpm resolve project .
+
+# 4. 定期的な状態確認
+vpm list packages -p .
+vpm check project .
+```
+
+### Unity開発環境最適化
+```bash
+# Unity Hub メモリ最適化
+echo 'export UNITY_HUB_DISABLE_CRASH_REPORTING=1' >> ~/.bashrc
+echo 'export UNITY_HUB_DISABLE_ANALYTICS=1' >> ~/.bashrc
+
+# Unity Editor設定最適化
+mkdir -p ~/Unity/Hub/Editor/2022.3.22f1/Editor/Data/Resources
+cat > ~/Unity/Hub/Editor/2022.3.22f1/Editor/Data/Resources/performance.cfg << 'EOF'
+gc-max-time-slice=5
+gc-incremental=true
+EOF
+```
+
+## 代替ソリューション
+
+### vrc-get（オープンソース代替）
+```bash
+# Rustベースの代替ツール
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
 cargo install vrc-get
 
-# vrc-getでプロジェクト管理
+# vrc-get使用例
 vrc-get new VirtualTokyoMatching --template world
+cd VirtualTokyoMatching
 vrc-get add com.vrchat.udonsharp
 vrc-get add com.vrchat.clientsim
 ```
 
-### 6.2 Unity Hub直接使用
-
-最も安定したアプローチ：
-
+### 完全手動セットアップ
 ```bash
-# Unity Hubでプロジェクト作成
+# Unity Hubのみでのプロジェクト作成
 /usr/bin/unityhub &
 
-# GUIで実行：
-# 1. Projects → New project → 3D Core
-# 2. Project name: VirtualTokyoMatching
-# 3. Location: ~/projects
-# 4. Create project
+# GUIでの操作：
+# 1. Projects → New project
+# 2. 3D Core template
+# 3. Project name: VirtualTokyoMatching
+# 4. Location: ~/projects
+# 5. Create project
 
-# Unity Editor内でVRChat SDKを手動追加
+# Unity Editor内でVRChat SDK手動追加
 # Window → Package Manager → + → Add package from git URL
+# https://github.com/vrchat/packages.git?path=/packages/com.vrchat.worlds
 ```
 
-## VirtualTokyoMatching実装ロードマップ
+## まとめ：成功への道筋
 
-### Phase A: 中核システム実装
-1. **112問性格診断システム**
-   - QuestionDatabase (ScriptableObject)
-   - 進捗保存・再開機能
-   - 暫定ベクトル更新
+### ✅ 確実に動作する環境
+- **OS**: Ubuntu 22.04 LTS
+- **Unity**: 2022.3.22f1（確認済み）
+- **VPM CLI**: 0.1.28（基本機能動作）
+- **Unity Hub**: 正常起動（プロジェクト管理）
 
-2. **30軸→6軸変換システム**
-   - ベクトル変換行列
-   - プライバシー保護縮約
-   - リアルタイム計算
+### 📋 推奨ワークフロー
+1. **VPM CLI**: プロジェクト作成・パッケージ管理
+2. **Unity Hub**: 開発・ビルド・テスト
+3. **手動設定**: Linux制限事項への対応
+4. **代替手段**: 問題発生時のフォールバック
 
-3. **マッチングアルゴリズム**
-   - コサイン類似度計算
-   - 上位3名推薦表示
-   - 進捗ベース暫定マッチング
+### 🎯 VirtualTokyoMatching実装目標
+- **112問性格診断システム**: 進捗保存・再開対応
+- **30D→6D変換**: プライバシー保護縮約
+- **リアルタイムマッチング**: コサイン類似度ベース推薦
+- **1on1個室システム**: 双方同意・15分タイマー
+- **パフォーマンス最適化**: PC 72FPS / Quest 60FPS
+- **プライバシー保護**: 公開は縮約データのみ
 
-### Phase B: VRChatワールド機能
-1. **Udon/UdonSharpスクリプト**
-   - PlayerDataManager（個人データ管理）
-   - PublicProfilePublisher（縮約データ同期）
-   - SessionRoomManager（1on1個室システム）
-
-2. **UI/UXシステム**
-   - 診断進捗表示
-   - 推薦カード表示UI
-   - 安全機能（緊急非表示・データリセット）
-
-3. **ネットワーク同期**
-   - 公開データのみ同期
-   - 双方同意→個室移動
-   - 15分タイマー→自動帰還
-
-### Phase C: 最適化・公開
-1. **パフォーマンス最適化**
-   - 目標：PC 72FPS / Quest 60FPS
-   - PerfGuard実装
-   - 分散計算システム
-
-2. **テスト・公開**
-   - エディタ／ClientSimテスト
-   - Friends+での安定性確認
-   - Public公開
-
-## 結論
-
-Ubuntu 22.04でのVRChatワールド開発は**完全に実現可能**です：
-
-### ✅ 構築完了した環境
-- **Unity 2022.3.22f1**: 動作確認済み
-- **Unity Hub**: 正常起動
-- **VPM CLI**: 基本機能動作（Linux制限考慮）
-- **VRChatプロジェクト**: 作成済み・SDK追加済み
-
-### 📋 推奨開発フロー
-1. **VPM CLI**: プロジェクト管理・パッケージ追加
-2. **Unity Hub**: プロジェクト開発・ビルド
-3. **手動設定**: Linux特有の制限への対応
-4. **代替ツール**: 問題発生時のフォールバック
-
-**VirtualTokyoMatching**は112問性格診断ベースのリアルタイムマッチングシステムとして、Ubuntu環境で完全に開発・公開可能です。この包括的なガイドにより、Linux環境でのプロフェッショナルなVRChatワールド開発が実現できます。
+**結論**: Ubuntu 22.04でのVRChatワールド開発は完全に実現可能です。この包括的なガイドにより、Linux環境でのプロフェッショナルなVRChatワールド開発が実現でき、**VirtualTokyoMatching**プロジェクトを成功に導くことができます。
