@@ -5,16 +5,16 @@
 まず、VRChatワールドがビルドできない根本的な原因であるコンパイルエラーを解決します。
 
 1.  **原因の特定**
-    *   スクリーンショットに表示されている `error CS7036` は、Unityの `Collections` パッケージのバージョンが、お使いのUnityエディタ（2022.3.22f1）と互換性がないために発生しています。
+    *   スクリーンショットに表示されている [`error CS7036`](error%20CS7036) は、Unityの [`Collections`](com.unity.collections) パッケージのバージョンが、お使いのUnityエディタ（2022.3.22f1）と互換性がないために発生しています。
 
 2.  **対処法：パッケージのバージョン変更**
-    *   Unityエディタ上部のメニューから `Window` > `Package Manager` を開きます。
-    *   ウィンドウ左上のプルダウンメニューを `Packages: In Project` に設定します。
-    *   リストから `Collections` を探し、選択します。
-    *   右下の `Remove` ボタンをクリックして、現在のパッケージ（`2.1.4`）を削除します。
-    *   削除後、Package Managerの左上にある `+` アイコンをクリックし、`Add package by name...` を選択します。
-    *   以下の通り入力し、`Add` をクリックします。
-        *   **Name:** `com.unity.collections`
+    *   Unityエディタ上部のメニューから [`Window`](Window) > [`Package Manager`](Package%20Manager) を開きます。
+    *   ウィンドウ左上のプルダウンメニューを [`Packages: In Project`](Packages:%20In%20Project) に設定します。
+    *   リストから [`Collections`](com.unity.collections) を探し、選択します。
+    *   右下の [`Remove`](Remove) ボタンをクリックして、現在のパッケージ（`2.1.4`）を削除します。
+    *   削除後、Package Managerの左上にある [`+`](+) アイコンをクリックし、[`Add package by name...`](Add%20package%20by%20name...) を選択します。
+    *   以下の通り入力し、[`Add`](Add) をクリックします。
+        *   **Name:** [`com.unity.collections`](com.unity.collections)
         *   **Version:** `1.4.0`
     *   Unityが自動的にパッケージを再インポートし、コンパイルエラーが解消されるはずです。
 
@@ -32,10 +32,10 @@ Unityのエラーが解消されたら、次はVRChatクライアントをUbuntu
 2.  **Steamを起動し、Protonを有効化する**
     *   アプリケーションメニューまたはターミナルで `steam` と入力してSteamを起動します。
     *   初回起動時はアップデートが行われるので、完了するまで待ちます。
-    *   Steamにログイン後、左上の `Steam` > `設定 (Settings)` > `Steam Play` を開きます。
-    *   `他のすべてのタイトルでSteam Playを有効化 (Enable Steam Play for all other titles)` にチェックを入れます。
-    *   互換ツールのバージョンとして `Proton Experimental` または最新の `Proton` バージョンを選択します。
-    *   `OK` をクリックし、指示に従ってSteamを再起動します。
+    *   Steamにログイン後、左上の [`Steam`](Steam) > [`設定 (Settings)`](Settings) > [`Steam Play`](Steam%20Play) を開きます。
+    *   [`他のすべてのタイトルでSteam Playを有効化 (Enable Steam Play for all other titles)`](Enable%20Steam%20Play%20for%20all%20other%20titles) にチェックを入れます。
+    *   互換ツールのバージョンとして [`Proton Experimental`](Proton%20Experimental) または最新の [`Proton`](Proton) バージョンを選択します。
+    *   [`OK`](OK) をクリックし、指示に従ってSteamを再起動します。
 
 3.  **VRChatをインストールして実行する**
     *   SteamのストアページでVRChatを検索し、インストールします。

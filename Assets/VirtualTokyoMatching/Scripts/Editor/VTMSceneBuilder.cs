@@ -131,12 +131,22 @@ namespace VirtualTokyoMatching.Editor
             GameObject lobby = new GameObject("Lobby");
             lobby.transform.SetParent(parent);
             
-            // Lobby floor (20x20)
+            // Lobby floor (20x20) with fixed white material
             GameObject lobbyFloor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             lobbyFloor.name = "LobbyFloor";
             lobbyFloor.transform.SetParent(lobby.transform);
             lobbyFloor.transform.localScale = new Vector3(2f, 1f, 2f); // 20x20 meters
             lobbyFloor.transform.position = Vector3.zero;
+            
+            // Apply stable white material immediately
+            Renderer lobbyFloorRenderer = lobbyFloor.GetComponent<Renderer>();
+            if (lobbyFloorRenderer != null)
+            {
+                lobbyFloorRenderer.sharedMaterial = WhiteFloorMaterial;
+                // Disable shadows to prevent color changes
+                lobbyFloorRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                lobbyFloorRenderer.receiveShadows = false;
+            }
             
             // Tag for material application
             lobbyFloor.tag = "Floor";
@@ -206,11 +216,22 @@ namespace VirtualTokyoMatching.Editor
             GameObject environment = new GameObject("Environment");
             environment.transform.SetParent(room.transform);
             
-            // Room floor
+            // Room floor with stable white material
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "RoomFloor";
             floor.transform.SetParent(environment.transform);
             floor.transform.localScale = new Vector3(1f, 1f, 1f); // 10x10 meters
+            
+            // Apply stable white material immediately
+            Renderer floorRenderer = floor.GetComponent<Renderer>();
+            if (floorRenderer != null)
+            {
+                floorRenderer.sharedMaterial = WhiteFloorMaterial;
+                // Disable shadows to prevent color changes
+                floorRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                floorRenderer.receiveShadows = false;
+            }
+            
             floor.tag = "RoomFloor";
             
             // Create room walls (private enclosure)
@@ -523,33 +544,83 @@ namespace VirtualTokyoMatching.Editor
 
         static void CreateMainLobbyCanvas(Transform parent)
         {
-            GameObject canvas = new GameObject("MainLobbyCanvas");
-            canvas.transform.SetParent(parent);
+            GameObject canvasGO = new GameObject("MainLobbyCanvas");
+            canvasGO.transform.SetParent(parent);
             
-            Canvas canvasComponent = canvas.AddComponent<Canvas>();
-            canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay;
+            // --- FIXED: World Space positioning instead of Screen Space Overlay ---
+            
+            // 1. Position canvas on wall (north wall of lobby)
+            canvasGO.transform.position = new Vector3(0, 2f, 9.5f); // North wall
+            canvasGO.transform.rotation = Quaternion.Euler(0, 180, 0); // Face inward
+            canvasGO.transform.localScale = new Vector3(0.005f, 0.005f, 0.005f); // Small scale for World Space
+            
+            Canvas canvasComponent = canvasGO.AddComponent<Canvas>();
+            canvasComponent.renderMode = RenderMode.WorldSpace; // FIXED: Changed to World Space
             canvasComponent.sortingOrder = 0;
             
-            CanvasScaler scaler = canvas.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
+            // RectTransform sizing for wall-mounted UI
+            RectTransform rectTransform = canvasGO.GetComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(800, 600); // 4m x 3m at scale 0.005
             
-            canvas.AddComponent<GraphicRaycaster>();
+            // VRChat-specific components for interaction
+            try {
+                // Add VRC UI Shape if VRC SDK is available
+                var vrcUiShapeType = System.Type.GetType("VRC.SDK3.Components.VRCUiShape, VRC.SDK3");
+                if (vrcUiShapeType != null)
+                {
+                    canvasGO.AddComponent(vrcUiShapeType);
+                }
+            }
+            catch { /* VRC SDK not available during headless build - will be added later */ }
             
-            // Create main action panel
-            GameObject actionPanel = CreateUIPanel(canvas.transform, "ActionPanel", new Vector2(300, 400), new Vector2(0, -50));
+            // Box Collider for VRChat interaction
+            BoxCollider collider = canvasGO.AddComponent<BoxCollider>();
+            collider.size = new Vector3(rectTransform.sizeDelta.x, rectTransform.sizeDelta.y, 0.1f);
+            collider.isTrigger = true;
             
-            // Create buttons with Japanese text
-            CreateUIButton(actionPanel.transform, "StartAssessmentButton", "診断を開始", new Vector2(0, 150), new Vector2(250, 50));
-            CreateUIButton(actionPanel.transform, "ContinueAssessmentButton", "診断を続ける", new Vector2(0, 75), new Vector2(250, 50));
-            CreateUIButton(actionPanel.transform, "ViewRecommendationsButton", "おすすめを見る", new Vector2(0, 0), new Vector2(250, 50));
-            CreateUIButton(actionPanel.transform, "GoToRoomButton", "個室へ直行", new Vector2(0, -75), new Vector2(250, 50));
-            CreateUIButton(actionPanel.transform, "SafetySettingsButton", "プライバシー設定", new Vector2(0, -150), new Vector2(250, 50));
+            CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.scaleFactor = 1f; // World Space uses constant pixel size
             
-            // Welcome text
-            CreateUIText(canvas.transform, "WelcomeText", "Virtual Tokyo Matching へようこそ", new Vector2(0, 400), new Vector2(800, 100));
+            canvasGO.AddComponent<GraphicRaycaster>();
+            
+            // Add emissive background for visibility in dark areas
+            GameObject backgroundPanel = CreateUIPanel(canvasGO.transform, "BackgroundEmissive", new Vector2(780, 580), Vector2.zero);
+            Image bgImage = backgroundPanel.GetComponent<Image>();
+            if (bgImage != null)
+            {
+                // Create emissive material for UI visibility
+                Material emissiveMat = new Material(Shader.Find("UI/Default"));
+                emissiveMat.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
+                // Note: UI materials work differently - using color with alpha for visibility
+                bgImage.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
+            }
+            
+            // Create main action panel with wall-optimized layout
+            GameObject actionPanel = CreateUIPanel(canvasGO.transform, "ActionPanel", new Vector2(700, 500), new Vector2(0, -50));
+            
+            // Create buttons with enhanced VRChat-optimized design
+            GameObject startBtn = CreateUIButton(actionPanel.transform, "StartAssessmentButton", "診断を開始", new Vector2(0, 150), new Vector2(400, 60));
+            GameObject continueBtn = CreateUIButton(actionPanel.transform, "ContinueAssessmentButton", "診断を続ける", new Vector2(0, 75), new Vector2(400, 60));
+            GameObject recommendBtn = CreateUIButton(actionPanel.transform, "ViewRecommendationsButton", "おすすめを見る", new Vector2(0, 0), new Vector2(400, 60));
+            GameObject roomBtn = CreateUIButton(actionPanel.transform, "GoToRoomButton", "個室へ直行", new Vector2(0, -75), new Vector2(400, 60));
+            GameObject safetyBtn = CreateUIButton(actionPanel.transform, "SafetySettingsButton", "プライバシー設定", new Vector2(0, -150), new Vector2(400, 60));
+            
+            // Add visual enhancements for wall-mounted UI
+            AddButtonEnhancements(startBtn);
+            AddButtonEnhancements(continueBtn);
+            AddButtonEnhancements(recommendBtn);
+            AddButtonEnhancements(roomBtn);
+            AddButtonEnhancements(safetyBtn);
+            
+            // Welcome text optimized for wall display
+            GameObject welcomeText = CreateUIText(canvasGO.transform, "WelcomeText", "Virtual Tokyo Matching へようこそ", new Vector2(0, 250), new Vector2(760, 80));
+            TextMeshProUGUI welcomeTMP = welcomeText.GetComponent<TextMeshProUGUI>();
+            if (welcomeTMP != null)
+            {
+                welcomeTMP.fontSize = 32; // Larger for wall visibility
+                welcomeTMP.fontStyle = TMPro.FontStyles.Bold;
+            }
         }
 
         static void CreateAssessmentCanvas(Transform parent)
@@ -744,6 +815,34 @@ namespace VirtualTokyoMatching.Editor
             return textObj;
         }
         
+        static void AddButtonEnhancements(GameObject button)
+        {
+            if (button == null) return;
+            
+            // Add Outline component for better visibility
+            var outline = button.AddComponent<UnityEngine.UI.Outline>();
+            outline.effectColor = new Color(0.2f, 0.4f, 0.8f, 1f);
+            outline.effectDistance = new Vector2(2, -2);
+            
+            // Enhance button colors for wall mounting
+            Image buttonImage = button.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                buttonImage.color = new Color(0.2f, 0.5f, 0.9f, 1f); // More visible blue
+            }
+            
+            // Enhance text for better readability
+            TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
+            if (buttonText != null)
+            {
+                buttonText.fontSize = 24; // Larger font for wall display
+                buttonText.fontStyle = TMPro.FontStyles.Bold;
+                // Add text outline for Quest visibility
+                buttonText.outlineWidth = 0.2f;
+                buttonText.outlineColor = Color.black;
+            }
+        }
+        
         static GameObject CreateUIToggle(Transform parent, string name, string labelText, Vector2 position)
         {
             GameObject toggle = new GameObject(name);
@@ -780,6 +879,27 @@ namespace VirtualTokyoMatching.Editor
             return toggle;
         }
 
+        // Fixed white material for floor stability
+        static Material _whiteFloorMat;
+        static Material WhiteFloorMaterial {
+            get {
+                if (_whiteFloorMat == null) {
+                    _whiteFloorMat = new Material(Shader.Find("Unlit/Color"));
+                    _whiteFloorMat.color = Color.white;
+                    _whiteFloorMat.name = "Mat_FloorWhite_Stable";
+                    
+                    // Ensure Materials directory exists
+                    if (!AssetDatabase.IsValidFolder(MATERIALS_PATH))
+                    {
+                        AssetDatabase.CreateFolder("Assets/VirtualTokyoMatching", "Materials");
+                    }
+                    
+                    AssetDatabase.CreateAsset(_whiteFloorMat, $"{MATERIALS_PATH}/Mat_FloorWhite_Stable.mat");
+                }
+                return _whiteFloorMat;
+            }
+        }
+
         // Material and Optimization Methods
 
         [MenuItem("VTM/Setup Materials")]
@@ -791,6 +911,7 @@ namespace VirtualTokyoMatching.Editor
             {
                 EnsureDirectoryStructure();
                 CreateBasicMaterials();
+                ApplyStableFloorMaterials(); // Apply white stable floors first
                 ApplyMaterialsToEnvironment();
                 SetupAudioSources();
                 
@@ -804,6 +925,74 @@ namespace VirtualTokyoMatching.Editor
                 Debug.LogError($"[VTM Builder] Materials setup failed: {e.Message}");
             }
         }
+        
+        [MenuItem("VTM/Fix Floor Materials to White")]
+        public static void FixFloorMaterials()
+        {
+            Debug.Log("[VTM Builder] Fixing all floor materials to stable white...");
+            
+            try
+            {
+                ApplyStableFloorMaterials();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                
+                Debug.Log("[VTM Builder] Floor materials fixed to stable white successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] Floor material fix failed: {e.Message}");
+            }
+        }
+        
+        static void ApplyStableFloorMaterials()
+        {
+            Debug.Log("[VTM Builder] Applying stable white materials to all floors...");
+            
+            // Find and fix lobby floor
+            GameObject lobbyFloor = GameObject.Find("LobbyFloor");
+            if (lobbyFloor != null)
+            {
+                Renderer renderer = lobbyFloor.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = WhiteFloorMaterial;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    Debug.Log("[VTM Builder] ✅ Fixed LobbyFloor material");
+                }
+            }
+            
+            // Find and fix all room floors
+            GameObject[] roomFloors = GameObject.FindGameObjectsWithTag("RoomFloor");
+            foreach (GameObject floor in roomFloors)
+            {
+                Renderer renderer = floor.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = WhiteFloorMaterial;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    Debug.Log($"[VTM Builder] ✅ Fixed {floor.name} material");
+                }
+            }
+            
+            // Also fix any objects with "Floor" tag
+            GameObject[] allFloors = GameObject.FindGameObjectsWithTag("Floor");
+            foreach (GameObject floor in allFloors)
+            {
+                Renderer renderer = floor.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = WhiteFloorMaterial;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    Debug.Log($"[VTM Builder] ✅ Fixed {floor.name} material");
+                }
+            }
+            
+            Debug.Log("[VTM Builder] All floor materials fixed to stable white Unlit shader");
+        }
 
         static void CreateBasicMaterials()
         {
@@ -815,12 +1004,13 @@ namespace VirtualTokyoMatching.Editor
                 AssetDatabase.CreateFolder("Assets/VirtualTokyoMatching", "Materials");
             }
             
-            // Lobby floor material - warm, welcoming
-            Material lobbyFloorMaterial = new Material(Shader.Find("Standard"));
+            // Ensure white floor material is created (this will be the main floor material)
+            Material whiteFloor = WhiteFloorMaterial; // This triggers creation
+            
+            // Lobby floor material - now using stable white as backup
+            Material lobbyFloorMaterial = new Material(Shader.Find("Unlit/Color"));
             lobbyFloorMaterial.name = "LobbyFloor";
-            lobbyFloorMaterial.color = new Color(0.85f, 0.8f, 0.9f); // Light purple-grey
-            lobbyFloorMaterial.SetFloat("_Metallic", 0.1f);
-            lobbyFloorMaterial.SetFloat("_Glossiness", 0.4f);
+            lobbyFloorMaterial.color = Color.white; // Changed to white for consistency
             AssetDatabase.CreateAsset(lobbyFloorMaterial, $"{MATERIALS_PATH}/LobbyFloor.mat");
             
             // Wall material - neutral, clean
@@ -831,12 +1021,10 @@ namespace VirtualTokyoMatching.Editor
             wallMaterial.SetFloat("_Glossiness", 0.2f);
             AssetDatabase.CreateAsset(wallMaterial, $"{MATERIALS_PATH}/Wall.mat");
             
-            // Room floor material - warmer for intimacy
-            Material roomFloorMaterial = new Material(Shader.Find("Standard"));
+            // Room floor material - now using stable white Unlit
+            Material roomFloorMaterial = new Material(Shader.Find("Unlit/Color"));
             roomFloorMaterial.name = "RoomFloor";
-            roomFloorMaterial.color = new Color(0.75f, 0.65f, 0.55f); // Warm brown
-            roomFloorMaterial.SetFloat("_Metallic", 0.0f);
-            roomFloorMaterial.SetFloat("_Glossiness", 0.5f);
+            roomFloorMaterial.color = Color.white; // Changed to white for consistency
             AssetDatabase.CreateAsset(roomFloorMaterial, $"{MATERIALS_PATH}/RoomFloor.mat");
             
             // Furniture material - comfortable appearance
@@ -855,7 +1043,7 @@ namespace VirtualTokyoMatching.Editor
             ceilingMaterial.SetFloat("_Glossiness", 0.1f);
             AssetDatabase.CreateAsset(ceilingMaterial, $"{MATERIALS_PATH}/Ceiling.mat");
             
-            Debug.Log("[VTM Builder] Created 5 basic materials");
+            Debug.Log("[VTM Builder] Created 6 basic materials (including stable white floor)");
         }
 
         static void ApplyMaterialsToEnvironment()
@@ -951,6 +1139,95 @@ namespace VirtualTokyoMatching.Editor
             Debug.Log("[VTM Builder] Audio system configured with 4 ambient sources");
         }
 
+        [MenuItem("VTM/Fix Canvas to World Space")]
+        public static void FixCanvasToWorldSpace()
+        {
+            Debug.Log("[VTM Builder] Converting UI canvases to World Space...");
+            
+            try
+            {
+                // Fix MainLobbyCanvas
+                GameObject mainCanvas = GameObject.Find("MainLobbyCanvas");
+                if (mainCanvas != null)
+                {
+                    Canvas canvas = mainCanvas.GetComponent<Canvas>();
+                    if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
+                    {
+                        // Convert to World Space
+                        canvas.renderMode = RenderMode.WorldSpace;
+                        
+                        // Position on north wall
+                        mainCanvas.transform.position = new Vector3(0, 2f, 9.5f);
+                        mainCanvas.transform.rotation = Quaternion.Euler(0, 180, 0);
+                        mainCanvas.transform.localScale = new Vector3(0.005f, 0.005f, 0.005f);
+                        
+                        // Set proper RectTransform size
+                        RectTransform rt = mainCanvas.GetComponent<RectTransform>();
+                        if (rt != null)
+                        {
+                            rt.sizeDelta = new Vector2(800, 600);
+                        }
+                        
+                        // Add VRChat interaction components
+                        if (mainCanvas.GetComponent<BoxCollider>() == null)
+                        {
+                            BoxCollider collider = mainCanvas.AddComponent<BoxCollider>();
+                            collider.size = new Vector3(800, 600, 0.1f);
+                            collider.isTrigger = true;
+                        }
+                        
+                        // Fix CanvasScaler for World Space
+                        CanvasScaler scaler = mainCanvas.GetComponent<CanvasScaler>();
+                        if (scaler != null)
+                        {
+                            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                            scaler.scaleFactor = 1f;
+                        }
+                        
+                        Debug.Log("[VTM Builder] ✅ MainLobbyCanvas converted to World Space");
+                    }
+                    else
+                    {
+                        Debug.Log("[VTM Builder] MainLobbyCanvas already in World Space");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[VTM Builder] MainLobbyCanvas not found");
+                }
+                
+                Debug.Log("[VTM Builder] Canvas World Space conversion completed!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] Canvas conversion failed: {e.Message}");
+            }
+        }
+        
+        [MenuItem("VTM/Apply All VRChat Fixes")]
+        public static void ApplyAllVRChatFixes()
+        {
+            Debug.Log("[VTM Builder] Applying all VRChat-specific fixes...");
+            
+            try
+            {
+                // Fix UI canvases to World Space
+                FixCanvasToWorldSpace();
+                
+                // Fix floor materials to stable white
+                FixFloorMaterials();
+                
+                // Apply VRChat optimizations
+                OptimizeForVRChat();
+                
+                Debug.Log("[VTM Builder] All VRChat fixes applied successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[VTM Builder] VRChat fixes failed: {e.Message}");
+            }
+        }
+        
         [MenuItem("VTM/Optimize For VRChat")]
         public static void OptimizeForVRChat()
         {

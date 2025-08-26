@@ -1,108 +1,106 @@
-# Virtual Tokyo Matching - Unity Integration Guide
+# バーチャル東京マッチング - Unity統合ガイド
 
-## Overview
-Your VRChat matchmaking world implementation is **complete and production-ready**. This guide covers Unity project setup and scene integration.
+## 概要
+VRChatマッチメイキングワールドの実装は**完了しており、本番環境に対応しています**。このガイドでは、Unityプロジェクトのセットアップとシーン統合について説明します。
 
-## Prerequisites
+## 前提条件
 - Unity 2022.3.6f1 LTS
-
 - VRChat Worlds SDK 3.5.0+
 - UdonSharp 1.1.8+
 
-## Step 1: Unity Project Setup
+## ステップ1: Unityプロジェクトのセットアップ
 
-
-### 1.2 Install Dependencies
+### 1.2 依存関係のインストール
 ```bash
-VCC Packages to install:
-- VRChat Worlds SDK (latest)
-- UdonSharp (latest)
-- ClientSim (for testing)
+インストールするVCCパッケージ:
+- VRChat Worlds SDK (最新)
+- UdonSharp (最新)
+- ClientSim (テスト用)
 ```
 
-### 1.3 Project Structure
+### 1.3 プロジェクト構造
 ```
 Assets/VirtualTokyoMatching/
-├── Scripts/                 # ✅ Your existing scripts
-├── ScriptableObjects/       # ✅ Your existing configurations
-├── Prefabs/                # ← Create UI prefabs
-├── Materials/              # ← UI materials
-├── Scenes/                 # ← Main world scene
-├── Resources/              # ← Configuration assets
-└── Audio/                  # ← Sound effects (optional)
+├── Scripts/                 # ✅ 既存のスクリプト
+├── ScriptableObjects/       # ✅ 既存の設定
+├── Prefabs/                # ← UIプレハブを作成
+├── Materials/              # ← UIマテリアル
+├── Scenes/                 # ← メインワールドシーン
+├── Resources/              # ← 設定アセット
+└── Audio/                  # ← 効果音 (オプション)
 ```
 
-## Step 2: ScriptableObject Configuration
+## ステップ2: ScriptableObjectの設定
 
-Create these configuration assets in the Resources folder:
+Resourcesフォルダーに以下の設定アセットを作成します。
 
-### 2.1 Performance Settings
+### 2.1 パフォーマンス設定
 ```csharp
-// Create: Assets/VirtualTokyoMatching/Resources/DefaultPerformanceSettings.asset
-Right-click → Create → VTM → Performance Settings
-Configure:
+// 作成: Assets/VirtualTokyoMatching/Resources/DefaultPerformanceSettings.asset
+右クリック → 作成 → VTM → Performance Settings
+設定:
 - Max Calculations Per Frame: 10 (PC), 5 (Quest)
 - Target Frame Rate: 72 (PC), 60 (Quest)
-- Sync Update Rate: 1.0 seconds
+- Sync Update Rate: 1.0秒
 ```
 
-### 2.2 Question Database
+### 2.2 質問データベース
 ```csharp
-// Create: Assets/VirtualTokyoMatching/Resources/QuestionDatabase.asset
-Right-click → Create → VTM → Question Database
-Configure:
-- 112 personality assessment questions
-- 5 answer choices per question
-- Target axis mapping (0-29)
-- Weight values for each choice
+// 作成: Assets/VirtualTokyoMatching/Resources/QuestionDatabase.asset
+右クリック → 作成 → VTM → Question Database
+設定:
+- 112の性格診断質問
+- 質問ごとに5つの回答選択肢
+- ターゲット軸マッピング (0-29)
+- 各選択肢の重み値
 ```
 
-### 2.3 Vector Configuration
+### 2.3 ベクトル設定
 ```csharp
-// Create: Assets/VirtualTokyoMatching/Resources/VectorConfig.asset
-Right-click → Create → VTM → Vector Configuration
-Configure:
-- 112→30D transformation matrix W
-- 30D→6D projection matrix P
-- Axis names and labels
+// 作成: Assets/VirtualTokyoMatching/Resources/VectorConfig.asset
+右クリック → 作成 → VTM → Vector Configuration
+設定:
+- 112→30D変換行列 W
+- 30D→6D射影行列 P
+- 軸名とラベル
 ```
 
-### 2.4 Summary Templates
+### 2.4 要約テンプレート
 ```csharp
-// Create: Assets/VirtualTokyoMatching/Resources/SummaryTemplates.asset
-Right-click → Create → VTM → Summary Templates
-Configure:
-- 30 axis templates (positive/negative descriptions)
-- Japanese personality tags
-- Headline templates
+// 作成: Assets/VirtualTokyoMatching/Resources/SummaryTemplates.asset
+右クリック → 作成 → VTM → Summary Templates
+設定:
+- 30の軸テンプレート (肯定的/否定的説明)
+- 日本語の性格タグ
+- 見出しテンプレート
 ```
 
-## Step 3: Scene Setup
+## ステップ3: シーンのセットアップ
 
-### 3.1 Main Scene Structure
+### 3.1 メインシーン構造
 ```
 VirtualTokyoMatchingWorld
 ├── Environment/
-│   ├── Lobby/              # Main meeting area
-│   ├── SessionRooms/       # 3 private 1-on-1 rooms
-│   └── Lighting/           # Baked lighting setup
+│   ├── Lobby/              # メインミーティングエリア
+│   ├── SessionRooms/       # 3つのプライベート1対1ルーム
+│   └── Lighting/           # ベイクされたライティング設定
 ├── UI/
-│   ├── MainUI/             # 5-button lobby interface
-│   ├── AssessmentUI/       # 112-question interface
-│   ├── RecommenderUI/      # Match cards & details
-│   └── SafetyUI/           # Privacy controls
+│   ├── MainUI/             # 5ボタンのロビーインターフェース
+│   ├── AssessmentUI/       # 112質問インターフェース
+│   ├── RecommenderUI/      # マッチカードと詳細
+│   └── SafetyUI/           # プライバシーコントロール
 ├── Systems/
-│   ├── VTMController/      # Main system orchestrator
-│   ├── NetworkedObjects/   # Sync'd profile publishers
-│   └── SpawnPoints/        # Teleport destinations
-└── Audio/                  # Ambient audio (optional)
+│   ├── VTMController/      # メインシステムオーケストレーター
+│   ├── NetworkedObjects/   # 同期されたプロファイルパブリッシャー
+│   └── SpawnPoints/        # テレポート先
+└── Audio/                  # 環境オーディオ (オプション)
 ```
 
-### 3.2 Core GameObject Setup
+### 3.2 コアGameObjectのセットアップ
 
-#### Main System Controller
+#### メインシステムコントローラー
 ```csharp
-VTMController (Empty GameObject)
+VTMController (空のGameObject)
 ├── PlayerDataManager       # UdonBehaviour
 ├── DiagnosisController     # UdonBehaviour  
 ├── VectorBuilder          # UdonBehaviour
@@ -113,30 +111,30 @@ VTMController (Empty GameObject)
 └── SafetyController       # UdonBehaviour
 ```
 
-#### Networked Profile System
+#### ネットワークプロファイルシステム
 ```csharp
-NetworkedProfilePublishers (Empty GameObject)
+NetworkedProfilePublishers (空のGameObject)
 ├── PlayerSlot_01          # PublicProfilePublisher
 ├── PlayerSlot_02          # PublicProfilePublisher
 ├── PlayerSlot_03          # PublicProfilePublisher
-└── ... (up to expected max players)
+└── ... (予想される最大プレイヤー数まで)
 ```
 
-#### Session Room Setup
+#### セッションルームのセットアップ
 ```csharp
-SessionRooms (Empty GameObject)
+SessionRooms (空のGameObject)
 ├── Room01/
 │   ├── SpawnPoint1        # Transform
 │   ├── SpawnPoint2        # Transform
-│   ├── Environment/       # Room 3D assets
-│   └── RoomUI/           # Timer, exit buttons
-├── Room02/               # Same structure
-└── Room03/               # Same structure
+│   ├── Environment/       # ルーム3Dアセット
+│   └── RoomUI/           # タイマー、終了ボタン
+├── Room02/               # 同様の構造
+└── Room03/               # 同様の構造
 ```
 
-### 3.3 UI Prefab Creation
+### 3.3 UIプレハブの作成
 
-#### Main Lobby UI (Canvas - Screen Space Overlay)
+#### メインロビーUI (Canvas - Screen Space Overlay)
 ```csharp
 MainLobbyCanvas
 ├── WelcomePanel/
@@ -149,16 +147,16 @@ MainLobbyCanvas
 │   ├── PublicSharing      # Button
 │   ├── ViewRecommendations # Button
 │   └── GoToRoom           # Button
-└── LoadingScreen/         # GameObject (initially inactive)
+└── LoadingScreen/         # GameObject (最初は非アクティブ)
 ```
 
-#### Assessment UI (Canvas - World Space)
+#### 評価UI (Canvas - World Space)
 ```csharp
 AssessmentCanvas
 ├── QuestionPanel/
 │   ├── QuestionText       # TextMeshProUGUI
 │   ├── QuestionNumber     # TextMeshProUGUI
-│   ├── ChoiceButtons[5]   # Button array
+│   ├── ChoiceButtons[5]   # Button配列
 │   └── Navigation/
 │       ├── PreviousButton # Button
 │       ├── NextButton     # Button
@@ -172,41 +170,41 @@ AssessmentCanvas
     └── LoadingIndicator   # GameObject
 ```
 
-#### Recommender UI (Canvas - World Space)
+#### レコメンダーUI (Canvas - World Space)
 ```csharp
 RecommenderCanvas
 ├── RecommendationCards/
-│   ├── Card01/            # RecommendationCard structure
-│   ├── Card02/            # RecommendationCard structure
-│   └── Card03/            # RecommendationCard structure
+│   ├── Card01/            # RecommendationCard構造
+│   ├── Card02/            # RecommendationCard構造
+│   └── Card03/            # RecommendationCard構造
 ├── DetailPanel/
-│   ├── PlayerInfo/        # Name, headline, summary
-│   ├── TagContainer/      # Dynamic tag spawning
-│   ├── RadarChart/        # Compatibility visualization
-│   └── Actions/           # Invite, close buttons
+│   ├── PlayerInfo/        # 名前、見出し、要約
+│   ├── TagContainer/      # 動的タグ生成
+│   ├── RadarChart/        # 互換性可視化
+│   └── Actions/           # 招待、閉じるボタン
 └── StatusPanel/
     ├── StatusText         # TextMeshProUGUI
     └── RefreshButton      # Button
 ```
 
-## Step 4: Component Configuration
+## ステップ4: コンポーネントの設定
 
-### 4.1 System Dependencies Setup
-For each UdonBehaviour, assign the required dependencies in the Inspector:
+### 4.1 システム依存関係のセットアップ
+各UdonBehaviourについて、インスペクターで必要な依存関係を割り当てます。
 
 ```csharp
 PlayerDataManager:
-- No dependencies
+- 依存関係なし
 
 DiagnosisController:
 - PlayerDataManager
 - VectorBuilder
-- QuestionDatabase (from Resources)
+- QuestionDatabase (Resourcesから)
 
 VectorBuilder:
 - PlayerDataManager
-- VectorConfiguration (from Resources)
-- QuestionDatabase (from Resources)
+- VectorConfiguration (Resourcesから)
+- QuestionDatabase (Resourcesから)
 
 PublicProfilePublisher:
 - PlayerDataManager
@@ -218,11 +216,11 @@ CompatibilityCalculator:
 - PerfGuard
 - PlayerDataManager
 
-// ... (continue for all components)
+// ... (すべてのコンポーネントについて続ける)
 ```
 
-### 4.2 Event Wiring
-Wire up the event system by assigning target arrays:
+### 4.2 イベントの接続
+ターゲット配列を割り当てることでイベントシステムを接続します。
 
 ```csharp
 PlayerDataManager.onDataLoadedTargets:
@@ -239,88 +237,88 @@ VectorBuilder.onVectorUpdatedTargets:
 - PublicProfilePublisher
 - CompatibilityCalculator
 
-// ... (continue event chains)
+// ... (イベントチェーンを続ける)
 ```
 
-## Step 5: World Configuration
+## ステップ5: ワールド設定
 
-### 5.1 VRChat World Settings
+### 5.1 VRChatワールド設定
 ```csharp
 VRChat Scene Descriptor:
-- Spawn Points: Place around lobby
-- Player Capacity: 20-30 users
-- Reference Camera: Position for screenshots
-- Respawn Height: -100 (below world)
+- スポーンポイント: ロビー周辺に配置
+- プレイヤー容量: 20-30ユーザー
+- 参照カメラ: スクリーンショット用に配置
+- リスポーン高さ: -100 (ワールドの下)
 ```
 
-### 5.2 Performance Optimization
+### 5.2 パフォーマンス最適化
 ```csharp
-Render Settings:
-- Ambient Lighting: Baked only
-- Fog: Optional for atmosphere
+レンダー設定:
+- 環境光: ベイクのみ
+- フォグ: 雰囲気に応じてオプション
 
-Quality Settings:
-- Texture Max Size: 2048 (PC), 1024 (Quest)
-- Shader LOD: VRChat compatible
-- Physics: Minimal colliders
+品質設定:
+- テクスチャ最大サイズ: 2048 (PC), 1024 (Quest)
+- シェーダーLOD: VRChat互換
+- 物理: 最小限のコライダー
 
-Audio:
-- Compression: Vorbis
-- Quality: Medium (saves bandwidth)
+オーディオ:
+- 圧縮: Vorbis
+- 品質: 中 (帯域幅を節約)
 ```
 
-## Step 6: Testing Setup
+## ステップ6: テストのセットアップ
 
-### 6.1 Local Testing
+### 6.1 ローカルテスト
 ```bash
-1. Build & Test in Unity:
-   - Test UI navigation
-   - Verify data persistence
-   - Check performance metrics
+1. Unityでビルド＆テスト:
+   - UIナビゲーションをテスト
+   - データ永続性を検証
+   - パフォーマンスメトリクスを確認
 
-2. ClientSim Testing:
-   - Test multiplayer sync
-   - Verify profile publishing
-   - Test session management
+2. ClientSimテスト:
+   - マルチプレイヤー同期をテスト
+   - プロファイル公開を検証
+   - セッション管理をテスト
 ```
 
-### 6.2 Upload Process
+### 6.2 アップロードプロセス
 ```bash
-1. VRChat Control Panel:
-   - Set world name and description
-   - Upload thumbnail image
-   - Set visibility (Private → Friends+ → Public)
+1. VRChatコントロールパネル:
+   - ワールド名と説明を設定
+   - サムネイル画像をアップロード
+   - 公開設定 (プライベート → フレンド+ → パブリック)
 
-2. Gradual Release:
-   - Private: Developer testing
-   - Friends+: Beta testing with friends
-   - Public: Full release after 1 week of stability
+2. 段階的リリース:
+   - プライベート: 開発者テスト
+   - フレンド+: フレンドとのベータテスト
+   - パブリック: 1週間の安定性確認後、完全リリース
 ```
 
-## Step 7: Configuration Data
+## ステップ7: 設定データ
 
-### 7.1 Sample Questions (QuestionDatabase)
-You'll need to populate 112 personality assessment questions. Here's the structure:
+### 7.1 サンプル質問 (QuestionDatabase)
+112の性格診断質問を投入する必要があります。構造は以下の通りです。
 
 ```csharp
-Example Question:
-Text: "新しい環境に適応するのは得意ですか？"
-Choices: ["全く得意ではない", "あまり得意ではない", "どちらとも言えない", "やや得意", "とても得意"]
-Target Axis: 5 (Adaptability)
-Weights: [-2.0f, -1.0f, 0.0f, 1.0f, 2.0f]
+質問例:
+テキスト: "新しい環境に適応するのは得意ですか？"
+選択肢: ["全く得意ではない", "あまり得意ではない", "どちらとも言えない", "やや得意", "とても得意"]
+ターゲット軸: 5 (適応性)
+重み: [-2.0f, -1.0f, 0.0f, 1.0f, 2.0f]
 ```
 
-### 7.2 Vector Configuration
+### 7.2 ベクトル設定
 ```csharp
-30D Axes Examples:
+30D軸の例:
 - 外向性 (Extraversion)
 - 創造性 (Creativity)  
 - 協調性 (Cooperation)
 - 論理性 (Logic)
 - 感情表現 (Emotional Expression)
-// ... (25 more axes)
+// ... (さらに25軸)
 
-6D Reduced Axes:
+6D削減軸:
 - 社交性 (Social)
 - 創造性 (Creative)
 - 協調性 (Cooperative)
@@ -329,27 +327,27 @@ Weights: [-2.0f, -1.0f, 0.0f, 1.0f, 2.0f]
 - 行動 (Behavioral)
 ```
 
-## Troubleshooting
+## トラブルシューティング
 
-### Common Issues:
-1. **PlayerData not saving**: Check VRChat account login
-2. **Sync issues**: Verify UdonSynced variables are correct
-3. **Performance drops**: Adjust PerfGuard K value
-4. **UI not responsive**: Check Canvas settings and EventSystem
+### よくある問題:
+1. **PlayerDataが保存されない**: VRChatアカウントのログインを確認
+2. **同期の問題**: UdonSynced変数が正しいか確認
+3. **パフォーマンス低下**: PerfGuardのK値を調整
+4. **UIが反応しない**: Canvas設定とEventSystemを確認
 
-### Debug Commands:
-- Enable performance logging in PerformanceSettings
-- Use Debug.Log statements (visible in VRChat console)
-- Test with multiple clients in Unity editor
+### デバッグコマンド:
+- PerformanceSettingsでパフォーマンスログを有効にする
+- Debug.Logステートメントを使用 (VRChatコンソールで表示)
+- Unityエディターで複数のクライアントでテスト
 
-## Your Implementation is Production Ready! ✅
+## 実装は本番環境に対応しています！ ✅
 
-All 9 core systems are complete and follow VRChat/UdonSharp best practices:
-- ✅ Progressive matching system
-- ✅ Event-driven architecture  
-- ✅ Performance optimization
-- ✅ Privacy & safety controls
-- ✅ Distributed processing
-- ✅ VRChat SDK3 compliance
+9つのコアシステムはすべて完了しており、VRChat/UdonSharpのベストプラクティスに従っています。
+- ✅ プログレッシブマッチングシステム
+- ✅ イベント駆動型アーキテクチャ  
+- ✅ パフォーマンス最適化
+- ✅ プライバシーと安全性のコントロール
+- ✅ 分散処理
+- ✅ VRChat SDK3準拠
 
-The only remaining work is Unity scene setup and configuration asset population.
+残りの作業は、Unityシーンのセットアップと設定アセットの投入のみです。

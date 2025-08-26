@@ -1,51 +1,51 @@
-# Virtual Tokyo Matching - Configuration Templates
+# バーチャル東京マッチング - 設定テンプレート
 
-## ScriptableObject Configuration Guide
+## ScriptableObject 設定ガイド
 
-This document provides sample configurations for all ScriptableObjects needed to run the Virtual Tokyo Matching system.
+このドキュメントは、バーチャル東京マッチングシステムを実行するために必要なすべてのScriptableObjectのサンプル設定を提供します。
 
-## 1. Performance Settings Configuration
+## 1. パフォーマンス設定
 
-**File**: `Assets/VirtualTokyoMatching/Resources/DefaultPerformanceSettings.asset`
+**ファイル**: [`Assets/VirtualTokyoMatching/Resources/DefaultPerformanceSettings.asset`](Assets/VirtualTokyoMatching/Resources/DefaultPerformanceSettings.asset)
 
-### Recommended Values:
+### 推奨値:
 ```csharp
-[Header("Frame Rate Limits")]
-maxCalculationsPerFrame: 10        // PC: 10, Quest: 5 (auto-adjusted)
-targetFrameRatePC: 72              // Target FPS for PC
-targetFrameRateQuest: 60           // Target FPS for Quest
+[Header("フレームレート制限")]
+maxCalculationsPerFrame: 10        // PC: 10, Quest: 5 (自動調整)
+targetFrameRatePC: 72              // PCの目標FPS
+targetFrameRateQuest: 60           // Questの目標FPS
 
-[Header("Calculation Thresholds")]
-maxFullRecalculationsPC: 5         // Max seconds for full compatibility recalc (PC)
-maxFullRecalculationsQuest: 10     // Max seconds for full compatibility recalc (Quest)
-incrementalUpdateInterval: 0.5f    // Seconds between incremental updates
+[Header("計算しきい値")]
+maxFullRecalculationsPC: 5         // 完全な互換性再計算の最大秒数 (PC)
+maxFullRecalculationsQuest: 10     // 完全な互換性再計算の最大秒数 (Quest)
+incrementalUpdateInterval: 0.5f    // 増分更新の間隔 (秒)
 
-[Header("Memory Optimization")]
-maxCachedProfiles: 50              // Max profiles to keep in memory
-maxRecommendationsToCalculate: 10  // Max compatibility calculations
-recommendationsToDisplay: 3        // Top N matches to show
+[Header("メモリ最適化")]
+maxCachedProfiles: 50              // メモリに保持するプロファイルの最大数
+maxRecommendationsToCalculate: 10  // 互換性計算の最大数
+recommendationsToDisplay: 3        // 表示する上位N件のマッチ
 
-[Header("Network Optimization")]
-syncDataUpdateRate: 1.0f           // Seconds between sync variable updates
-maxSyncUpdatesPerFrame: 3          // Limit sync updates per frame
+[Header("ネットワーク最適化")]
+syncDataUpdateRate: 1.0f           // 同期変数更新の間隔 (秒)
+maxSyncUpdatesPerFrame: 3          // フレームあたりの同期更新の制限
 
-[Header("Quality Settings")]
-maxTextureResolutionPC: 2048       // Max texture size for PC
-maxTextureResolutionQuest: 1024    // Max texture size for Quest
+[Header("品質設定")]
+maxTextureResolutionPC: 2048       // PCの最大テクスチャサイズ
+maxTextureResolutionQuest: 1024    // Questの最大テクスチャサイズ
 useMipmaps: true
 enableLightBaking: true
 
-[Header("Debug Settings")]
-enablePerformanceLogging: false    // Enable for debugging
-showFrameTimeUI: false            // Show debug UI overlay
-performanceLogInterval: 5.0f      // Seconds between performance logs
+[Header("デバッグ設定")]
+enablePerformanceLogging: false    // デバッグのために有効化
+showFrameTimeUI: false            // デバッグUIオーバーレイを表示
+performanceLogInterval: 5.0f      // パフォーマンスログの間隔 (秒)
 ```
 
-## 2. Vector Configuration
+## 2. ベクトル設定
 
-**File**: `Assets/VirtualTokyoMatching/Resources/VectorConfig.asset`
+**ファイル**: [`Assets/VirtualTokyoMatching/Resources/VectorConfig.asset`](Assets/VirtualTokyoMatching/Resources/VectorConfig.asset)
 
-### 30D Axis Names (Japanese):
+### 30D軸名 (日本語):
 ```csharp
 axisNames[30] = {
     "外向性",      // 0: Extraversion
@@ -81,76 +81,76 @@ axisNames[30] = {
 };
 ```
 
-### 6D Reduced Axis Names:
+### 6D削減軸名:
 ```csharp
 reducedAxisNames[6] = {
-    "社交性",      // 0: Social (combines extraversion, sociability, expression)
-    "創造性",      // 1: Creative (combines creativity, innovation, idealism)
-    "協調性",      // 2: Cooperative (combines cooperation, empathy, collaboration)
-    "理性",        // 3: Rational (combines logic, analysis, planning)
-    "感情",        // 4: Emotional (combines emotion, passion, intuition)
-    "行動性"       // 5: Behavioral (combines assertiveness, adventure, independence)
+    "社交性",      // 0: Social (外向性、社交性、表現力を結合)
+    "創造性",      // 1: Creative (創造性、革新性、理想主義を結合)
+    "協調性",      // 2: Cooperative (協調性、共感性、協力を結合)
+    "理性",        // 3: Rational (論理性、分析力、計画性を結合)
+    "感情",        // 4: Emotional (感情、情熱、直感力を結合)
+    "行動性"       // 5: Behavioral (冒険心、自立性、競争心を結合)
 };
 ```
 
-### Sample Transformation Matrices:
+### サンプル変換行列:
 
-#### Weight Matrix (112→30D) - Sample for first 10 questions:
+#### 重み行列 (112→30D) - 最初の10問の例:
 ```csharp
-// Question 0: "新しい人と話すのは得意ですか？" (Good at talking to new people?)
-// Target axis 0 (Extraversion) and 8 (Sociability)
-SetWeight(0, 0, 0.8f);  // Strong contribution to extraversion
-SetWeight(0, 8, 0.6f);  // Moderate contribution to sociability
-SetWeight(0, 17, 0.4f); // Slight contribution to assertiveness
+// 質問0: "新しい人と話すのは得意ですか？"
+// ターゲット軸 0 (外向性) と 8 (社交性)
+SetWeight(0, 0, 0.8f);  // 外向性への強い貢献
+SetWeight(0, 8, 0.6f);  // 社交性への中程度の貢献
+SetWeight(0, 17, 0.4f); // 積極性へのわずかな貢献
 
-// Question 1: "創作活動に興味がありますか？" (Interested in creative activities?)
-// Target axis 1 (Creativity) and 12 (Innovation)
-SetWeight(1, 1, 0.9f);  // Strong creativity
-SetWeight(1, 12, 0.5f); // Moderate innovation
-SetWeight(1, 14, 0.3f); // Slight expressiveness
+// 質問1: "創作活動に興味がありますか？"
+// ターゲット軸 1 (創造性) と 12 (革新性)
+SetWeight(1, 1, 0.9f);  // 強い創造性
+SetWeight(1, 12, 0.5f); // 中程度の革新性
+SetWeight(1, 14, 0.3f); // わずかな表現力
 
-// ... Continue for all 112 questions
+// ... 全112問について続く
 ```
 
-#### Projection Matrix (30D→6D):
+#### 射影行列 (30D→6D):
 ```csharp
-// Social axis (combines multiple social traits)
-SetProjectionWeight(0, 0, 0.8f);   // Extraversion → Social
-SetProjectionWeight(8, 0, 0.7f);   // Sociability → Social  
-SetProjectionWeight(14, 0, 0.5f);  // Expressiveness → Social
-SetProjectionWeight(17, 0, 0.6f);  // Assertiveness → Social
+// 社交軸 (複数の社交的特性を結合)
+SetProjectionWeight(0, 0, 0.8f);   // 外向性 → 社交
+SetProjectionWeight(8, 0, 0.7f);   // 社交性 → 社交  
+SetProjectionWeight(14, 0, 0.5f);  // 表現力 → 社交
+SetProjectionWeight(17, 0, 0.6f);  // 積極性 → 社交
 
-// Creative axis
-SetProjectionWeight(1, 1, 0.8f);   // Creativity → Creative
-SetProjectionWeight(12, 1, 0.7f);  // Innovation → Creative
-SetProjectionWeight(7, 1, 0.5f);   // Idealism → Creative
+// 創造軸
+SetProjectionWeight(1, 1, 0.8f);   // 創造性 → 創造
+SetProjectionWeight(12, 1, 0.7f);  // 革新性 → 創造
+SetProjectionWeight(7, 1, 0.5f);   // 理想主義 → 創造
 
-// Cooperative axis
-SetProjectionWeight(2, 2, 0.8f);   // Cooperativeness → Cooperative
-SetProjectionWeight(16, 2, 0.7f);  // Empathy → Cooperative
-SetProjectionWeight(22, 2, 0.6f);  // Collaboration → Cooperative
+// 協調軸
+SetProjectionWeight(2, 2, 0.8f);   // 協調性 → 協調
+SetProjectionWeight(16, 2, 0.7f);  // 共感性 → 協調
+SetProjectionWeight(22, 2, 0.6f);  // 協力性 → 協調
 
-// Rational axis
-SetProjectionWeight(3, 3, 0.8f);   // Logic → Rational
-SetProjectionWeight(15, 3, 0.7f);  // Analytical → Rational
-SetProjectionWeight(19, 3, 0.6f);  // Planning → Rational
+// 理性軸
+SetProjectionWeight(3, 3, 0.8f);   // 論理性 → 理性
+SetProjectionWeight(15, 3, 0.7f);  // 分析力 → 理性
+SetProjectionWeight(19, 3, 0.6f);  // 計画性 → 理性
 
-// Emotional axis
-SetProjectionWeight(4, 4, 0.8f);   // Emotional Expression → Emotional
-SetProjectionWeight(25, 4, 0.7f);  // Passion → Emotional
-SetProjectionWeight(20, 4, 0.5f);  // Intuition → Emotional
+// 感情軸
+SetProjectionWeight(4, 4, 0.8f);   // 感情表現 → 感情
+SetProjectionWeight(25, 4, 0.7f);  // 情熱 → 感情
+SetProjectionWeight(20, 4, 0.5f);  // 直感力 → 感情
 
-// Behavioral axis
-SetProjectionWeight(6, 5, 0.7f);   // Adventurousness → Behavioral
-SetProjectionWeight(10, 5, 0.6f);  // Independence → Behavioral
-SetProjectionWeight(21, 5, 0.5f);  // Competitiveness → Behavioral
+// 行動軸
+SetProjectionWeight(6, 5, 0.7f);   // 冒険心 → 行動
+SetProjectionWeight(10, 5, 0.6f);  // 自立性 → 行動
+SetProjectionWeight(21, 5, 0.5f);  // 競争心 → 行動
 ```
 
-## 3. Question Database
+## 3. 質問データベース
 
-**File**: `Assets/VirtualTokyoMatching/Resources/QuestionDatabase.asset`
+**ファイル**: [`Assets/VirtualTokyoMatching/Resources/QuestionDatabase.asset`](Assets/VirtualTokyoMatching/Resources/QuestionDatabase.asset)
 
-### Sample Questions (first 10 of 112):
+### サンプル質問 (112問中最初の10問):
 
 ```csharp
 questions[0] = {
@@ -171,7 +171,7 @@ questions[1] = {
     choices: [
         "全く興味がない",
         "あまり興味がない",
-        "どちらとも言えない", 
+        "どちらとも言えない",
         "やや興味がある",
         "とても興味がある"
     ],
@@ -283,21 +283,21 @@ questions[9] = {
     weights: [-2.0f, -1.0f, 0.0f, 1.0f, 2.0f]
 };
 
-// Continue for questions[10] through questions[111]...
+// questions[10]からquestions[111]まで続く...
 ```
 
-## 4. Summary Templates
+## 4. 要約テンプレート
 
-**File**: `Assets/VirtualTokyoMatching/Resources/SummaryTemplates.asset`
+**ファイル**: [`Assets/VirtualTokyoMatching/Resources/SummaryTemplates.asset`](Assets/VirtualTokyoMatching/Resources/SummaryTemplates.asset)
 
-### Configuration Values:
+### 設定値:
 ```csharp
-significanceThreshold: 0.3f        // Minimum |value| to be significant
-maxTagsPerProfile: 3              // Max tags to generate
-maxSentencesInSummary: 2          // Max sentences in summary
+significanceThreshold: 0.3f        // 有意であるための最小|値|
+maxTagsPerProfile: 3              // 生成するタグの最大数
+maxSentencesInSummary: 2          // 要約の最大文数
 ```
 
-### Sample Axis Templates:
+### サンプル軸テンプレート:
 
 ```csharp
 axisTemplates[0] = { // Extraversion
@@ -333,10 +333,10 @@ axisTemplates[2] = { // Cooperativeness
     neutralTags: ["柔軟", "状況対応", "バランス型"]
 };
 
-// Continue for all 30 axes...
+// 全30軸について続く...
 ```
 
-### Headline Templates:
+### 見出しテンプレート:
 ```csharp
 headlineTemplates = [
     {
@@ -353,118 +353,118 @@ headlineTemplates = [
     },
     {
         template: "新しいつながりを求めています",
-        minConfidence: 0.0f // Default fallback
+        minConfidence: 0.0f // デフォルトのフォールバック
     }
 ];
 ```
 
-## 5. Unity Inspector Configuration Checklist
+## 5. Unityインスペクター設定チェックリスト
 
-### MainUIController Dependencies:
+### MainUIControllerの依存関係:
 ```
 ✅ PlayerDataManager
 ✅ DiagnosisController  
 ✅ RecommenderUI
 ✅ SafetyController
 ✅ SessionRoomManager
-✅ All UI GameObject references
-✅ Button color settings
+✅ すべてのUI GameObject参照
+✅ ボタンの色設定
 ```
 
-### DiagnosisController Dependencies:
+### DiagnosisControllerの依存関係:
 ```
 ✅ PlayerDataManager
 ✅ VectorBuilder
-✅ QuestionDatabase (from Resources)
-✅ All UI references (buttons, texts, sliders)
-✅ Event target arrays
+✅ QuestionDatabase (Resourcesから)
+✅ すべてのUI参照 (ボタン、テキスト、スライダー)
+✅ イベントターゲット配列
 ```
 
-### VectorBuilder Dependencies:
+### VectorBuilderの依存関係:
 ```
 ✅ PlayerDataManager
-✅ VectorConfiguration (from Resources)
-✅ QuestionDatabase (from Resources)  
-✅ Event target arrays
+✅ VectorConfiguration (Resourcesから)
+✅ QuestionDatabase (Resourcesから)  
+✅ イベントターゲット配列
 ```
 
-### PublicProfilePublisher Dependencies:
+### PublicProfilePublisherの依存関係:
 ```
 ✅ PlayerDataManager
 ✅ VectorBuilder
-✅ VectorConfiguration (from Resources)
+✅ VectorConfiguration (Resourcesから)
 ✅ ValuesSummaryGenerator
-✅ Event target arrays
-✅ Sync variable setup (automatic)
+✅ イベントターゲット配列
+✅ 同期変数設定 (自動)
 ```
 
-### CompatibilityCalculator Dependencies:
+### CompatibilityCalculatorの依存関係:
 ```
 ✅ PerfGuard
 ✅ PlayerDataManager
-✅ Event target arrays
-✅ Settings (max recommendations, intervals)
+✅ イベントターゲット配列
+✅ 設定 (最大推奨数、間隔)
 ```
 
-### RecommenderUI Dependencies:
+### RecommenderUIの依存関係:
 ```
 ✅ CompatibilityCalculator
 ✅ SessionRoomManager
 ✅ ValuesSummaryGenerator
-✅ All UI references (cards, detail panels)
-✅ Color settings
+✅ すべてのUI参照 (カード、詳細パネル)
+✅ 色設定
 ```
 
-### SessionRoomManager Dependencies:
+### SessionRoomManagerの依存関係:
 ```
 ✅ PlayerDataManager
-✅ Session room array setup
-✅ Lobby spawn point
-✅ UI references (invitation dialogs)
-✅ Event target arrays
+✅ セッションルーム配列設定
+✅ ロビースポーンポイント
+✅ UI参照 (招待ダイアログ)
+✅ イベントターゲット配列
 ```
 
-### PerfGuard Dependencies:
+### PerfGuardの依存関係:
 ```
-✅ PerformanceSettings (from Resources)
-✅ Event target arrays
-```
-
-### ValuesSummaryGenerator Dependencies:
-```
-✅ SummaryTemplates (from Resources)
-✅ VectorConfiguration (from Resources)
-✅ Localization settings
+✅ PerformanceSettings (Resourcesから)
+✅ イベントターゲット配列
 ```
 
-### SafetyController Dependencies:
+### ValuesSummaryGeneratorの依存関係:
+```
+✅ SummaryTemplates (Resourcesから)
+✅ VectorConfiguration (Resourcesから)
+✅ ローカライズ設定
+```
+
+### SafetyControllerの依存関係:
 ```
 ✅ PlayerDataManager
 ✅ PublicProfilePublisher
 ✅ SessionRoomManager  
-✅ All UI references (toggles, panels, buttons)
+✅ すべてのUI参照 (トグル、パネル、ボタン)
 ```
 
-## 6. Testing Configuration
+## 6. テスト設定
 
-### Test Data Setup:
-1. **Create test question database** with simple questions
-2. **Set low significance threshold** (0.1) for easier testing
-3. **Enable performance logging** during development
-4. **Use small calculation budgets** (K=2-3) for testing
-5. **Create test user profiles** with known vector values
+### テストデータ設定:
+1. シンプルな質問で**テスト質問データベースを作成**
+2. テストを容易にするために**有意性しきい値を低く設定** (0.1)
+3. 開発中は**パフォーマンスロギングを有効化**
+4. テストのために**小さな計算予算を使用** (K=2-3)
+5. 既知のベクトル値を持つ**テストユーザープロファイルを作成**
 
-### Debug Settings:
+### デバッグ設定:
 ```csharp
 PerformanceSettings:
 - enablePerformanceLogging: true
 - showFrameTimeUI: true
-- maxCalculationsPerFrame: 3 (for testing)
+- maxCalculationsPerFrame: 3 (テスト用)
 
-All Components:
-- Add Debug.Log statements for state changes
-- Use descriptive log messages
-- Include component names in logs
+すべてのコンポーネント:
+- 状態変更のためにDebug.Logステートメントを追加
+- 説明的なログメッセージを使用
+- ログにコンポーネント名を含める
 ```
 
-This configuration will give you a fully functional Virtual Tokyo Matching system ready for deployment in VRChat!
+この設定により、VRChatにデプロイする準備が整った、完全に機能するバーチャル東京マッチングシステムが提供されます！
