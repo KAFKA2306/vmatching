@@ -1,2 +1,4 @@
 *.log
 *cache*
+claude-desktop-debian/
+unity-mcp/
