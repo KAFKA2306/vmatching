@@ -1,82 +1,288 @@
-はい、依頼どおり ProjectSetup.md を**VPMベース**に書き直した内容を下記に示します。Ubuntu 22.04 での実用運用を前提に、プロジェクト作成から依存解決、シーン統合までをCLI中心で完結するフローに再構成しています。[1][2]
+# Virtual Tokyo Matching - Project Setup Guide
 
-## 目的
-この文書は、Virtual Tokyo Matching のUnityプロジェクトを、GUIのVCCではなくCLIのVPMを中心に構築・管理するための手順書として再編成したものです。Linux(Ubuntu 22.04)での実用運用を前提に、テンプレート作成、設定、依存解決、シーン統合、テストまでの要点を最短経路で記載します。[2][1]
+## Overview
+This document provides comprehensive setup instructions for the Virtual Tokyo Matching Unity project using VPM CLI on Ubuntu 22.04 LTS. All setup issues have been resolved and the automated build pipeline is fully functional.
 
-## 前提条件
-- OS: Ubuntu 22.04 LTS、ネットワーク接続、端末操作環境。[1]
-- Unity Hub/Unity Editor 2022.3 LTS 系のローカル配置（手動パス指定想定）。[1]
-- .NET SDK（VPMを実行するため、一般的に最新版を推奨）。[1]
+## Prerequisites
+- **OS**: Ubuntu 22.04 LTS with network connectivity
+- **Unity**: Unity Hub + Unity Editor 2022.3.22f1 LTS installed
+- **.NET SDK**: Latest version (required for VPM CLI)
+- **Git**: For version control and project management
 
-## 1. VPM CLI の導入と初期化
-- VPM CLI をグローバル導入（dotnetツール経由）し、テンプレートを展開します。[1]
-  - 実行例: `dotnet tool install --global vrchat.vpm.cli` → `vpm install templates` → `vpm --version` で導入確認。[1]
-- 初回作成直後に自動生成される設定フォルダ（~/.local/share/VRChatCreatorCompanion/）にテンプレートが配置されることを確認します。[1]
+## Quick Start (Automated Setup)
 
-## 2. Ubuntu向け VPM 設定（settings.json）
-- settings.json（~/.local/share/VRChatCreatorCompanion/settings.json）に Unity Hub/Editor のパスを手動で記載し、VPMがエディタを認識できるようにします。[1]
-- 記述例（実環境のパスに置き換えて使用）。[1]
-  - `pathToUnityHub`: 例 `/opt/unityhub/unityhub`。[1]
-  - `pathToUnityExe`: 例 `/home/USERNAME/Unity/Hub/Editor/2022.3.6f1/Editor/Unity`。[1]
-  - `unityEditors`: `version` と `path` のセットを配列で記載（Unity 2022.3系）。[1]
-- 反映確認: `vpm check hub` と `vpm check unity` を実行し、認識結果を確認します。[1]
+### 1. Run Automated Setup Script
+```bash
+# Clone or navigate to project directory
+cd /home/kafka/projects/virtualtokyomatching
 
-## 3. プロジェクトの新規作成（テンプレート）
-- テンプレートからVRChat Worldsプロジェクトを作成します。[1]
-  - 実行例: `vpm new VirtualTokyoMatching World -p ~/projects` → `cd ~/projects/VirtualTokyoMatching`。[1]
-- 作成直後の状態を検証・解決します。[1]
-  - 実行例: `vpm check project .` → `vpm resolve project .` → `vpm list packages -p .`。[1]
-- 以降のパッケージ追加は `vpm add package <ID> -p .` を基本とし、解決が必要な場合は再度 `vpm resolve project .` を実行します。[1]
+# Run the complete setup (this handles everything automatically)
+./setup_unity_project.sh
+```
 
-## 4. プロジェクト構成（Unity側ディレクトリ）
-- 既存の実装を次の構成で配置します（Assets/VirtualTokyoMatching 以下）。[1]
-  - Scripts（Analysis, Assessment, Core, Matching, Performance, Safety, Session, Sync, UI, Vector）。[1]
-  - ScriptableObjects（QuestionDatabase, VectorConfiguration, SummaryTemplates, PerformanceSettings）。[1]
-  - Prefabs（UI, Rooms, Systems）、Materials、Textures、Audio を用途別に配置します。[1]
+### 2. Launch Unity Project
+```bash
+# Option 1: Using the launcher script
+./run_unity.sh
 
-## 5. ScriptableObject の作成と設定
-- Resources 配下に以下4種のアセットを作成し、最小構成から投入します。[1]
-  - QuestionDatabase: 112問・5択・軸(0–29)・選択肢ウェイトのスキーマに沿って作成。[1]
-  - VectorConfiguration: 112→30DのW、30→6DのP、軸名/ラベルを設定。[1]
-  - SummaryTemplates: 30軸の記述テンプレート、タグ、見出しテンプレートを設定。[1]
-  - PerformanceSettings: フレーム予算、目標FPS、計算間隔などの実行パラメータを設定。[1]
+# Option 2: Direct Unity launch
+/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -projectPath /home/kafka/projects/VirtualTokyoMatching
+```
 
-## 6. シーン統合（最短ガイド）
-- シーン階層は VirtualTokyoMatchingWorld をルートに、Environment/Systems/UI/Testing で整理します。[2]
-- Systems/VTMController に各UdonBehaviour（PlayerDataManager, DiagnosisController, VectorBuilder, CompatibilityCalculator, PerfGuard, ValuesSummaryGenerator, MainUIController, SafetyController, SessionRoomManager）を配置します。[2]
-- NetworkedProfiles を想定最大人数分設置し、PublicProfilePublisher ごとにユニークなNetwork IDを割り当てます。[2]
-- UIは MainLobby（Screen Space）と Assessment/Recommendations/Safety（World Space）を設置し、TextMeshProや各Button/Slider参照をInspectorで結線します。[2]
-- VRC Scene Descriptor を設定し、ロビーのSpawnPoints、Reference Camera、Respawn Height を指定します。[2]
+### 3. Generate Complete World
+```bash
+# Run the complete world creation pipeline
+./vtm_complete_setup.sh
+```
 
-## 7. 依存参照とイベント配線
-- PlayerDataManager の onDataLoadedTargets に DiagnosisController、VectorBuilder、MainUIController、SafetyController を割り当てます。[2]
-- DiagnosisController の onQuestionAnsweredTargets に VectorBuilder と PublicProfilePublisher を割り当てます。[2]
-- VectorBuilder の onVectorUpdatedTargets と onVectorFinalizedTargets に PublicProfilePublisher と CompatibilityCalculator を割り当てます。[2]
-- CompatibilityCalculator の完了イベントを RecommenderUI に接続し、UI更新のトリガにします。[2]
+## Manual Setup (Step by Step)
 
-## 8. パフォーマンスとビルド
-- PC目標: 72fps/200MB以下/再計算≤5s、Quest目標: 60fps/100MB以下/再計算≤10s を目安に最適化します。[1]
-- テクスチャ上限（PC:2048、Quest:1024）、ベイク照明、最小限のリアルタイムライト、軽量シェーダ運用を徹底します。[1]
-- ビルド設定は PC(Standalone Windows 64-bit) と Quest(Android) を用意し、サイズ・品質・圧縮方式（ASTC等）を目標に合わせて調整します。[1]
+### 1. VPM CLI Installation and Configuration
 
-## 9. テストワークフロー
-- エディタ内で UI 遷移、保存/再開、公開/非公開、レコメンド更新、1on1招待までを一通り検証します。[1]
-- 複数インスタンスや実機VRChatクライアントでの挙動確認を行い、同期・帯域・フレームタイムをログと合わせて点検します。[1]
-- 目標を満たしたら Friends+ で1週間の安定検証を行い、その後 Public 化します。[1]
+#### Install VPM CLI
+```bash
+# Install VPM CLI globally
+dotnet tool install --global vrchat.vpm.cli
 
-## 10. セキュリティ/プライバシー要点
-- 112問の生回答と30Dベクトルは非公開、公開は6D縮約＋タグ/ヘッドラインのみで、公開は明示同意ベースです。[1]
-- 緊急非表示やセッション退出、データリセットをSafety UIから常時操作可能にします。[1]
+# Install VPM templates
+vpm install templates
 
-## 付録A: よく使うVPMコマンド（例）
-- 初期化: `dotnet tool install --global vrchat.vpm.cli` → `vpm install templates`。[1]
-- 新規作成: `vpm new VirtualTokyoMatching World -p ~/projects` → `cd ~/projects/VirtualTokyoMatching`。[1]
-- 検証/解決: `vpm check project .` → `vpm resolve project .` → `vpm list packages -p .`。[1]
-- 追加/削除: `vpm add package <ID> -p .`、`vpm remove package <ID> -p .`（解決が必要なら resolve を再実行）。[1]
+# Verify installation
+vpm --version
+```
 
-## 付録B: 次に行う作業（チェックリスト）
-- Resourcesに4種のScriptableObjectを作成し、最小データを投入。[1]
-- Systems/UI/NetworkedProfilesを配置し、Inspector参照とイベント配線を完了。[2]
-- 目標パフォーマンスを満たすまで品質と負荷を調整し、Friends+→Public へ段階的に公開。[1]
+#### Configure VPM Settings
+The setup script automatically creates proper `settings.json` with correct paths:
+```json
+{
+  "pathToUnityHub": "/usr/bin/unityhub",
+  "pathToUnityExe": "/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity",
+  "unityEditors": [
+    {
+      "version": "2022.3.22f1",
+      "path": "/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity"
+    }
+  ]
+}
+```
 
-以上を新しい ProjectSetup.md（VPM版）として保存すれば、Linux中心の実運用に適した、再現性の高いセットアップ手順として利用できます。[2][1]
+#### Fix Common VPM Issues
+If you encounter JSON parsing errors:
+```bash
+# Backup and regenerate settings
+mv ~/.local/share/VRChatCreatorCompanion/settings.json ~/.local/share/VRChatCreatorCompanion/settings.json.broken
+vpm install templates
+vpm list repos
+```
+
+### 2. Unity Project Creation
+
+#### Create VRChat World Project
+```bash
+# Create project directory
+mkdir -p ~/projects
+cd ~/projects
+
+# Create VRChat World project
+vpm new VirtualTokyoMatching World -p ~/projects
+cd VirtualTokyoMatching
+
+# Verify project structure
+vpm check project .
+```
+
+#### Install Required Packages
+```bash
+# Install VRChat Worlds SDK
+vpm add package com.vrchat.worlds -p .
+
+# Install UdonSharp
+vpm add package com.vrchat.udonsharp -p .
+
+# Install ClientSim for testing
+vpm add package com.vrchat.clientsim -p .
+
+# Resolve all dependencies
+vpm resolve project .
+```
+
+### 3. Project Structure Setup
+
+#### Create Asset Folders
+```bash
+cd Assets
+mkdir -p VirtualTokyoMatching/{Scripts,ScriptableObjects,Prefabs,Materials,Scenes,Resources,Audio,Textures}
+mkdir -p VirtualTokyoMatching/Scripts/{Core,Assessment,Vector,Matching,UI,Safety,Session,Sync,Analysis,Performance,Editor}
+mkdir -p VirtualTokyoMatching/Prefabs/{UI,SessionRooms,Systems}
+```
+
+#### Copy VTM Scripts
+All VTM scripts are already included in the repository under `Assets/VirtualTokyoMatching/Scripts/`.
+
+### 4. Unity Tags Configuration
+
+The setup script automatically adds required tags to `ProjectSettings/TagManager.asset`:
+- `Floor`
+- `Wall`
+- `RoomFloor`
+- `Furniture`
+- `SpawnMarker`
+
+### 5. Scene Generation (Automated)
+
+#### Using VTM Scene Builder
+The `vtm_complete_setup.sh` script automatically:
+1. Creates the complete world structure (Lobby + 3 Session Rooms)
+2. Sets up materials and lighting
+3. Applies VRChat optimizations
+4. Validates the complete setup
+
+#### Generated Content
+- **Scene**: `Assets/VirtualTokyoMatching/Scenes/VirtualTokyoMatching.unity`
+- **Environment**: 20x20m Lobby + 3x 10x10m Session Rooms
+- **Spawn Points**: 10 total with proper VRChat compliance
+- **UI Systems**: 4 canvas systems with Japanese localization
+- **Lighting**: Directional sun + ambient + per-room lighting
+- **Systems**: VTM Controller + 30 networked profile slots
+
+## Unity Hub Integration
+
+### Adding Project to Unity Hub
+1. Open Unity Hub
+2. Click "Add" or "Open"
+3. Navigate to `/home/kafka/projects/VirtualTokyoMatching`
+4. Select the project folder
+5. The project will appear in Unity Hub's project list
+
+### Launching from Unity Hub
+- Simply click on "VirtualTokyoMatching" in Unity Hub's project list
+- Unity Editor will open with the project loaded
+
+## VRChat SDK Integration
+
+### Import VRChat SDK3 Worlds
+1. Open Unity Editor with the VTM project
+2. Go to **Window → VRChat SDK → Show Control Panel**
+3. Follow SDK installation instructions if not already imported
+4. SDK packages are automatically included via VPM
+
+### Configure VRC Scene Descriptor
+1. Find `VRCWorld` GameObject in the scene hierarchy
+2. Add Component → `VRC_SceneDescriptor`
+3. Configure spawn points from `SpawnSystem` children
+4. Set respawn height and other VRChat-specific settings
+
+## ScriptableObject Configuration
+
+### Required Assets in Resources/
+Create these ScriptableObjects with configuration data:
+- **QuestionDatabase**: 112 personality assessment questions
+- **VectorConfiguration**: 112→30D transformation matrix (W), 30→6D projection matrix (P)
+- **SummaryTemplates**: Personality description templates
+- **PerformanceSettings**: FPS targets and computation budgets
+
+### Sample Configuration Files
+Template files are included in `Assets/VirtualTokyoMatching/Resources/`:
+- `SampleQuestionDatabase.json`
+- `VectorConfigurationTemplate.json`
+- `SummaryTemplatesConfiguration.json`
+- `PerformanceSettingsTemplate.json`
+
+## Performance Targets
+
+### PC Build (Windows 64-bit)
+- **Target**: ≥72 FPS
+- **Memory**: <200MB
+- **Texture Limit**: 2048x2048
+- **Compatibility Recalc**: ≤5 seconds
+
+### Quest Build (Android)
+- **Target**: ≥60 FPS
+- **Memory**: <100MB
+- **Texture Limit**: 1024x1024
+- **Compatibility Recalc**: ≤10 seconds
+
+## Testing Workflow
+
+### Local Testing
+1. Use Unity Play mode for basic functionality
+2. Test UI transitions, data persistence, recommendation updates
+3. Verify public/private profile toggles work correctly
+
+### Multi-Client Testing
+1. Use VRChat SDK's ClientSim for multiplayer testing
+2. Test synchronization between multiple users
+3. Verify compatibility calculations and recommendations
+4. Test session room invitations and timers
+
+### VRChat Deployment
+1. Build for target platform (PC/Quest)
+2. Upload via VRChat SDK Control Panel
+3. Test in Friends+ mode for 1 week
+4. Deploy to Public after validation
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Unity Hub Not Recognizing Project
+- **Cause**: Missing `ProjectSettings/` folder
+- **Solution**: Run `./setup_unity_project.sh` to create proper Unity project structure
+
+#### VPM CLI JSON Parsing Errors
+- **Cause**: Malformed `settings.json`
+- **Solution**: Remove and regenerate: `mv ~/.local/share/VRChatCreatorCompanion/settings.json{,.broken} && vpm install templates`
+
+#### Build Target Validation Errors
+- **Cause**: VTMSceneBuilder expecting Windows64 on Linux
+- **Solution**: Fixed in current version - validation now accepts Linux64 builds
+
+#### Tag Not Found Errors
+- **Cause**: Missing Unity tags for materials
+- **Solution**: Tags automatically added by setup script to `TagManager.asset`
+
+## Available Scripts
+
+### Setup Scripts
+- **`setup_unity_project.sh`**: Complete project setup from scratch
+- **`vtm_complete_setup.sh`**: Generate complete world structure
+- **`vtm_headless_build.sh`**: Headless world building
+- **`run_unity.sh`**: Launch Unity Editor with project
+
+### Utility Scripts
+- **VTM/Create Complete World**: Unity menu item for manual world creation
+- **VTM/Setup Materials**: Unity menu item for material configuration
+- **VTM/Optimize For VRChat**: Unity menu item for VRChat optimization
+- **VTM/Validate Scene Setup**: Unity menu item for scene validation
+
+## Next Steps
+
+1. **Open Unity Editor**: Use `./run_unity.sh` or Unity Hub
+2. **Import VRChat SDK**: Window → VRChat SDK → Show Control Panel
+3. **Configure VRC_SceneDescriptor**: Add to VRCWorld GameObject
+4. **Add UdonSharp Components**: Wire up VTM system components
+5. **Test and Deploy**: Use ClientSim → Friends+ → Public progression
+
+## Architecture Overview
+
+### Core Systems
+- **PlayerDataManager**: Persistent user data (questions 1-112, 30D vectors)
+- **DiagnosisController**: 112-question personality assessment UI
+- **VectorBuilder**: Incremental vector updates and normalization
+- **CompatibilityCalculator**: Cosine similarity computation
+- **PublicProfilePublisher**: 6D compressed data broadcasting
+- **RecommenderUI**: Top 3 compatibility matches display
+
+### Data Privacy
+- **Private**: Raw answers (112 questions) + 30D vectors
+- **Public**: 6D compressed vectors + auto-generated tags/headlines
+- **Progressive**: Provisional matching with incomplete questionnaires
+- **Consensual**: Public sharing requires explicit opt-in
+
+### Performance Architecture
+- **Frame Budget**: Distributed processing with K operations/frame limit
+- **Event-Driven**: Recalculation triggered by answer updates only
+- **Incremental**: Provisional vectors during assessment, normalized on completion
+- **Memory Optimized**: PC<200MB, Quest<100MB constraints
+
+This setup guide provides a complete, tested workflow for Virtual Tokyo Matching development on Ubuntu 22.04 with Unity 2022.3 LTS and VRChat SDK3.
