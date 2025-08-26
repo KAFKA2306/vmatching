@@ -1,38 +1,87 @@
-# バーチャル東京マッチング - Unity統合ガイド
+# バーチャル東京マッチング - Unity統合ガイド ✅ 更新版
 
-## 概要
-VRChatマッチメイキングワールドの実装は**完了しており、本番環境に対応しています**。このガイドでは、Unityプロジェクトのセットアップとシーン統合について説明します。
+## 概要 ✅ 完了済み
+VRChatマッチメイキングワールドの実装は**完了しており、Unity プロジェクトセットアップも完了済みです**。このガイドでは、現在の統合状況とVRChat固有の修正について説明します。
 
-## 前提条件
-- Unity 2022.3.6f1 LTS
-- VRChat Worlds SDK 3.5.0+
-- UdonSharp 1.1.8+
+## 前提条件 ✅ セットアップ完了 (2024年8月26日)
+- **Unity 2022.3.22f1 LTS** ✅ インストール完了
+- **VRChat Worlds SDK v3.7.6** ✅ VPM経由でインストール完了
+- **UdonSharp runtime** ✅ SDK3 Worlds に統合済み
+- **VCC (VRChat Creator Companion)** ✅ CLI統合完了
+- **プロジェクト自動化** ✅ launch_unity.sh 等のスクリプト完備
 
-## ステップ1: Unityプロジェクトのセットアップ
+## ✅ 完了: Unity プロジェクト起動方法
 
-### 1.2 依存関係のインストール
+### 現在のセットアップ済み環境
+**プロジェクト場所**: `/home/kafka/projects/VirtualTokyoMatching`
+
+**Unity エディタ起動**:
 ```bash
-インストールするVCCパッケージ:
-- VRChat Worlds SDK (最新)
-- UdonSharp (最新)
-- ClientSim (テスト用)
+cd /home/kafka/projects/VirtualTokyoMatching
+./launch_unity.sh  # 自動化スクリプト使用
+
+# または直接起動:
+/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -projectPath .
 ```
 
-### 1.3 プロジェクト構造
+### ✅ 完了: 依存関係とプロジェクト構造
+**インストール済みVCCパッケージ**:
+- **VRChat Worlds SDK v3.7.6** ✅ VPM自動インストール完了
+- **UdonSharp runtime** ✅ SDK3 Worlds統合完了  
+- **ClientSim** ✅ テスト環境完備
+
+**実際のプロジェクト構造**:
 ```
 Assets/VirtualTokyoMatching/
-├── Scripts/                 # ✅ 既存のスクリプト
-├── ScriptableObjects/       # ✅ 既存の設定
-├── Prefabs/                # ← UIプレハブを作成
-├── Materials/              # ← UIマテリアル
-├── Scenes/                 # ← メインワールドシーン
-├── Resources/              # ← 設定アセット
-└── Audio/                  # ← 効果音 (オプション)
+├── Scripts/                 # ✅ 9/9 コアスクリプト完備
+│   ├── Core/               # PlayerDataManager, SafetyController
+│   ├── Assessment/         # DiagnosisController  
+│   ├── Vector/             # VectorBuilder
+│   ├── Matching/           # CompatibilityCalculator
+│   ├── UI/                 # RecommenderUI, MainUIController
+│   ├── Session/            # SessionRoomManager
+│   ├── Analysis/           # ValuesSummaryGenerator
+│   ├── Performance/        # PerfGuard
+│   ├── Sync/               # PublicProfilePublisher
+│   └── Editor/             # ✅ VRChat修正ツール群
+├── ScriptableObjects/       # ✅ 設定クラス完備
+├── Materials/              # ✅ 安定白マテリアル生成済み
+├── Resources/              # ✅ JSON設定テンプレート完備
+└── Prefabs/                # UI プレハブ（シーン生成時自動作成）
 ```
 
-## ステップ2: ScriptableObjectの設定
+## ✅ 完了: VRChat固有の修正と最適化
 
-Resourcesフォルダーに以下の設定アセットを作成します。
+### VRChat fixes 自動適用システム
+Unity エディタ起動後、以下のメニューから一括修正を適用:
+
+```
+VTM → Apply All VRChat Fixes  # ワンクリック修正
+```
+
+**含まれる修正内容**:
+1. **UI Canvas World Space 変換** - プレイヤー追従問題を解決
+2. **安定した白床マテリアル** - 色変化問題を解決  
+3. **Quest対応UI最適化** - 大フォント + アウトライン + emissive背景
+4. **VRChat互換インタラクション** - BoxCollider + VRCUiShape 自動追加
+
+### 新しく追加された開発ツール
+- **VTMVRChatValidator.cs** - 修正適用の検証とレポート生成
+- **VTMAutoBuildFixer.cs** - ビルド時自動修正適用
+- **README_VRChat_Fixes.md** - 詳細な修正ドキュメント
+
+### 利用可能なメニューコマンド
+- **VTM/Fix Canvas to World Space** - UI の World Space 変換
+- **VTM/Fix Floor Materials to White** - 床マテリアル修正
+- **VTM/Validate VRChat Fixes** - 修正状況の確認
+- **VTM/Generate VRChat Performance Report** - パフォーマンスレポート
+- **VTM/Build World for VRChat** - VRChat向けビルド準備
+
+---
+
+## ステップ2: ScriptableObjectの設定 ✅ テンプレート完備
+
+Resourcesフォルダーに設定テンプレートが用意済みです。
 
 ### 2.1 パフォーマンス設定
 ```csharp

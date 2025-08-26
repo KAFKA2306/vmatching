@@ -9,31 +9,40 @@ This document provides comprehensive setup instructions for the Virtual Tokyo Ma
 - **.NET SDK**: Latest version (required for VPM CLI)
 - **Git**: For version control and project management
 
-## Quick Start (Automated Setup)
+## Quick Start (Automated Setup) ✅ COMPLETED
 
-### 1. Run Automated Setup Script
-```bash
-# Clone or navigate to project directory
-cd /home/kafka/projects/virtualtokyomatching
+**Status**: Unity project successfully set up on August 26, 2024
 
-# Run the complete setup (this handles everything automatically)
-./setup_unity_project.sh
+### 1. Unity Project Ready
+The Unity project has been automatically configured at:
 ```
+/home/kafka/projects/VirtualTokyoMatching
+```
+
+**Included Components:**
+- Unity 2022.3.22f1 LTS with VRChat SDK3 Worlds v3.7.6
+- VPM (VRChat Package Manager) CLI integration
+- UdonSharp runtime with all VTM scripts
+- Automated build tools and VRChat optimization fixes
 
 ### 2. Launch Unity Project
 ```bash
-# Option 1: Using the launcher script
-./run_unity.sh
+# Navigate to project directory
+cd /home/kafka/projects/VirtualTokyoMatching
 
-# Option 2: Direct Unity launch
-/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -projectPath /home/kafka/projects/VirtualTokyoMatching
+# Launch Unity Editor (automated script available)
+./launch_unity.sh
+
+# Alternative: Direct Unity launch
+/home/kafka/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -projectPath .
 ```
 
-### 3. Generate Complete World
-```bash
-# Run the complete world creation pipeline
-./vtm_complete_setup.sh
-```
+### 3. VRChat Fixes Applied
+**Resolved Issues:**
+- ✅ UI Canvas player-following issue (converted to World Space)
+- ✅ Floor material color changes (stable white Unlit materials)
+- ✅ Quest UI optimization (wall-mounted design, enhanced visibility)
+- ✅ Build automation tools and validation system
 
 ## Manual Setup (Step by Step)
 

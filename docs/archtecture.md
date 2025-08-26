@@ -9,9 +9,18 @@
 - 境界内: アンケート、ベクトル算出、縮約、公開同期、類似度計算、上位リストUI、1対1個室、フィードバック、エラーハンドリングを単一ワールド内で完結させます。[1][2]
 - 境界外: 外部API/DB、確実通知、長期予約、画像の永続保存、他者PlayerDataへの書き込みは採用しません。[2]
 
-## 技術スタック
-- Unity 2022 LTS＋VCC、VRChat SDK3 Worlds、UdonSharpを採用します。[1][2]
+## 技術スタック ✅ 2024年8月26日更新
+- **Unity 2022.3.22f1 LTS** + **VCC (VRChat Creator Companion)**
+- **VRChat SDK3 Worlds v3.7.6** + **UdonSharp runtime**
+- **VPM (VRChat Package Manager)** CLI統合
+- **自動化された Unity プロジェクトセットアップ** 完了済み
 - PersistenceのPlayerDataを用いてユーザー自身のデータ（キー・値）をサーバー側に保存し、ワールド間でも復元可能とする前提を置きます。[3][2]
+
+**VRChat固有の最適化実装:**
+- World Space UI システム（プレイヤー追従問題を解決）
+- 安定した白色Unlitマテリアル（色変化問題を解決）
+- Quest対応UI設計（大フォント、アウトライン、emissive背景）
+- 自動化されたVRChat fixes適用システム
 
 ## 実行時構成（ランタイム）
 - Udonコンポーネントは以下で構成し、イベント駆動で連携します（回答確定・入退室・公開ON/OFF）。[1]
