@@ -1,405 +1,237 @@
-# VRChat固有の問題と修正 - ✅ 完了済み (2024年8月26日)
+Assets\VirtualTokyoMatching\ScriptableObjects\QuestionDatabase.cs(26,10): error CS0592: Attribute 'Header' is not valid on this declaration type. It is only valid on 'field' declarations.
 
-## 📋 実装サマリー
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(821,42): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-**すべてのVRChat固有の問題が解決済みです:**
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(831,29): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-| 問題 | 修正ステータス | 実装方法 |
-|-----|------------|---------|
-| ✅ UI Canvas がプレイヤーに追従 | 完了 | World Space変換 + 壁面固定 |
-| ✅ 床マテリアルの色変化 | 完了 | 安定した白Unlitマテリアル自動生成 |
-| ✅ Quest向けUI最適化 | 完了 | 大フォント + アウトライン + emissive |
-| ✅ VRChat互換性システム | 完了 | BoxCollider + VRCUiShape 自動追加 |
-| ✅ ビルド自動化 | 完了 | 一括修正コマンドとバリデーション |
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(838,29): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-**新しく追加されたツール:**
-- **VTM/Apply All VRChat Fixes** - ワンクリック修正
-- **VTMVRChatValidator.cs** - 修正検証システム
-- **VTMAutoBuildFixer.cs** - ビルド時自動修正
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(848,33): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
----
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(860,32): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-## 詳細実装内容
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(870,32): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-**実装ステータス**: 以下のVRChat固有の問題はすべて解決済みです。
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(880,35): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-## ✅ 完了: UIがプレイヤーに追従してしまう原因と修正方法
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(890,48): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-**修正完了**: VTMSceneBuilder.cs にて Canvas の World Space 変換と壁面固定を実装済み。
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(898,42): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-### 1. 原因（解決済み）
-診断開始ボックス（Canvas）が  
-- Canvas の **Render Mode** が "World Space" ではなく "Screen Space – Overlay/Camera" になっていた → ✅修正完了
-- 壁面への固定配置が未実装だった → ✅自動配置システム実装済み
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(921,31): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-**実装された修正**:
-- Canvas を World Space に変換
-- 壁面座標 (0, 2f, 9.5f) に自動配置  
-- VRChat互換の BoxCollider と VRCUiShape 追加
-- Quest対応のスケーリング (0.005) 適用
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(691,42): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-## 2. 修正ステップ
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(702,42): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-### 2-1. Canvas を静的ワールドUIに変更
-1. Hierarchy で該当 Canvas を選択。  
-2. Inspector → Canvas  
-   - Render Mode を **World Space** に変更。  
-   - **Event Camera** に MainCamera を指定。  
-3. RectTransform をリセットし、壁面前など固定したい位置に移動・回転。  
-4. **Scale** は 0.001〜0.01 程度に下げ、実寸1–2m 程度に調整。  
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(716,29): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-### 2-2. 不要な追従スクリプトを除去
-1. UdonSharp や MonoBehaviour 内で `FollowPlayer()` 系処理がないか検索。  
-2. 以下のようなコードがあれば削除またはコメントアウト。  
-   ```csharp
-   // canvas.transform.SetParent(Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).transform);
-   ```
-3. 代わりに **Scene 固定の Empty 親オブジェクト** を用意し、そこに子付け。
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(725,29): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-### 2-3. Collider ＋ Raycast 対応
-壁 UI をクリックできるよう  
-- **Box Collider** を付与  
-- Canvas の **Graphic Raycaster** を残す  
-- VRChat 用に **VRC_UIInputField** などがある場合は共存確認。
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(748,29): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
 
-### 2-4. Quest/PC の視認性確認
-World Space UI は距離減衰・解像度影響を受けるため、  
-- TextMeshPro フォントサイズを大きめに（48pt 以上）  
-- キャンバス **Dynamic Pixels Per Unit** を 10–20 に調整  
-- 照明が暗い場合は Emissive マテリアルか補助ライトを配置。
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(402,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
 
-## 3. ワールドビルド前のチェックリスト
-- [ ] Render Mode が World Space。  
-- [ ] Canvas の親はシーン上の固定オブジェクト。  
-- [ ] スポーン位置から容易に視認できる位置に配置。  
-- [ ] Quest/PC 双方で文字が潰れない。  
-- [ ] Collider と Raycaster が機能しクリック可能。  
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(402,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
 
-これで診断開始ボックスが壁面に固定され、プレイヤーの動きに左右されず正しく表示されます。
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(101,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
 
----
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(101,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
 
-承知いたしました。UIがプレイヤーに追従してしまう問題について、原因と具体的な修正手順をUnity Editorの操作と、貴殿が作成されたC#の自動構築スクリプト(`VTMSceneBuilder.cs`)の両面から解説します。
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(771,31): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(782,31): error CS1109: Extension methods must be defined in a top level static class; EnumerableExtensions is a nested class
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerformanceBenchmarkSuite.cs(191,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerformanceBenchmarkSuite.cs(191,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(544,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(544,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerformanceBenchmarkSuite.cs(285,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerformanceBenchmarkSuite.cs(285,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(287,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(287,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(594,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Matching\ProgressiveMatchingTests.cs(594,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(205,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(205,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(334,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Performance\PerfGuardTests.cs(334,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(247,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(247,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(376,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(376,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(425,10): error CS0246: The type or namespace name 'UnityTestAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+Assets\VirtualTokyoMatching\Tests\Sync\MultiUserSynchronizationTests.cs(425,10): error CS0246: The type or namespace name 'UnityTest' could not be found (are you missing a using directive or an assembly reference?)
+
+
+
+
+最短の回避策は「テスト系スクリプトをいったん Assets/VirtualTokyoMatching/Tests の外へ移動し、実行用アセンブリから完全に外す」ことですが、長期的には次の３点を直せばすべての CS0xxx 系エラーは消えます。  
 
 ***
 
-## 1.【原因】UIがプレイヤーに追従する理由
-
-お見受けするに、問題のUI（診断開始ボタンなどを含むパネル）はUnityのCanvasコンポーネントの**Render Mode**が**`Screen Space - Overlay`**に設定されています。
-
-これはUIを常に画面の最前面に表示するモードで、VRではプレイヤーの視界に追従するため、まるで頭に貼り付いているかのように見えます。これを壁に設置するには、Render Modeを**`World Space`**に変更し、3D空間内のオブジェクトとして扱う必要があります。
-
-提供いただいた`VTMSceneBuilder.cs`内の以下の記述が該当箇所です。
-
-**VTMSceneBuilder.cs**
+● **QuestionDatabase.cs – CS0592**  
+‐ Header 属性はフィールド宣言にしか使えません。26 行目のようにクラス／メソッドの直上に付いている場合は  
 ```csharp
-static void CreateMainLobbyCanvas(Transform parent)
+// 修正前（NG）
+[Header("質問データベース")]
+public class QuestionDatabase : ScriptableObject { … }
+```
+を  
+```csharp
+public class QuestionDatabase : ScriptableObject
 {
-    // ...
-    // この設定が原因でUIがプレイヤーに追従します
-    canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay; 
-    // ...
+    [Header("質問データベース")]          // ←フィールドの直前に移動
+    public List<QuestionItem> questions;
 }
 ```
+のように*フィールド*の前へ移すか、単に削除して下さい。[7]
 
-## 2.【解決策】UIを壁に固定する具体的な手順
+***
 
-以下の2つの方法のうち、貴殿の開発スタイルに合わせて選択、または両方を実施してください。
-
-### 手順A：Unity Editorでの手動修正（即時確認・デバッグ用）
-
-いますぐ動作を確認したい場合は、以下の手順で手動修正します。
-
-1.  **対象オブジェクトの選択**
-    Unityの`Hierarchy`ウィンドウで、`UI` > `MainLobbyCanvas`を選択します。
-
-2.  **Render Modeの変更**
-    `Inspector`ウィンドウで`Canvas`コンポーネントを探し、**Render Mode**を`Screen Space - Overlay`から**`World Space`**に変更します。
-
-[1]
-
-3.  **Event Cameraの設定**
-    `World Space`に変更すると`Event Camera`という項目が現れます。ここに`Hierarchy`内のメインカメラ（通常は`VRCCam`やプレイヤーオブジェクト配下のカメラ）をドラッグ＆ドロップします。これを行わないとボタンがクリックに反応しません。
-
-4.  **位置とスケールの調整（最重要）**
-    `World Space`にすると、Canvasは非常に巨大なオブジェクトとして3D空間に現れます。
-    - `Rect Transform`コンポーネントで、**`Scale`**を**`X: 0.005, Y: 0.005, Z: 0.005`** のように極端に小さい値に設定します。
-    - その後、**`Position`**と**`Rotation`**を調整し、壁面の適切な位置に配置します。`Width`と`Height`でパネル自体の大きさを調整できます。
-
-5.  **VRChat用の当たり判定を追加**
-    - `MainLobbyCanvas`オブジェクトに`VRC Ui Shape`コンポーネントを追加します。これによりVRChatのUI用レーザーが反応するようになります。
-    - さらに、`Box Collider`を追加し、`Rect Transform`のサイズに合わせて大きさを調整します。`Is Trigger`にチェックを入れてください。
-
-### 手順B：自動構築スクリプトの恒久修正 (`VTMSceneBuilder.cs`)
-
-貴殿の自動化ワークフローに組み込むための、より恒久的で確実な修正です。`VTMSceneBuilder.cs`内の`CreateMainLobbyCanvas`メソッドを以下のように書き換えてください。
-
-**変更前のコード (`VTMSceneBuilder.cs`)**
+● **ProgressiveMatchingTests / MultiUserSynchronizationTests – CS1109**  
+‐ 拡張メソッドは「名前空間直下の `static` クラス」でないと認識されません。  
 ```csharp
-static void CreateMainLobbyCanvas(Transform parent)
+// 修正前（NG）: テストクラスの *内側* にネスト
+public class ProgressiveMatchingTests
 {
-    GameObject canvas = new GameObject("MainLobbyCanvas");
-    canvas.transform.SetParent(parent);
-    Canvas canvasComponent = canvas.AddComponent<Canvas>();
-    canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay; // 問題の箇所
-    canvasComponent.sortingOrder = 0;
-    CanvasScaler scaler = canvas.AddComponent<CanvasScaler>();
-    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-    scaler.referenceResolution = new Vector2(1920, 1080);
-    // ...
-}
-```
-
-**変更後のコード (`VTMSceneBuilder.cs`)**
-```csharp
-static void CreateMainLobbyCanvas(Transform parent)
-{
-    GameObject canvasGO = new GameObject("MainLobbyCanvas");
-    canvasGO.transform.SetParent(parent);
-
-    // --- ここからが変更箇所 ---
-
-    // 1. World Spaceに設定し、壁面に配置
-    canvasGO.transform.position = new Vector3(0, 2f, 9.5f); // ロビー北側の壁面あたり
-    canvasGO.transform.rotation = Quaternion.Euler(0, 180, 0); // 壁と平行になるよう回転
-    canvasGO.transform.localScale = new Vector3(0.005f, 0.005f, 0.005f); // 非常に小さくする
-
-    Canvas canvasComponent = canvasGO.AddComponent<Canvas>();
-    canvasComponent.renderMode = RenderMode.WorldSpace; // World Spaceに変更
-    
-    // RectTransformのサイズを設定 (例: 幅4m x 高さ3m)
-    RectTransform rectTransform = canvasGO.GetComponent<RectTransform>();
-    rectTransform.sizeDelta = new Vector2(800, 600);
-
-    // VRChatでのインタラクションに必要なコンポーネント
-    canvasGO.AddComponent<VRC.SDK3.Components.VRCUiShape>();
-    BoxCollider collider = canvasGO.AddComponent<BoxCollider>();
-    collider.size = new Vector3(rectTransform.sizeDelta.x, rectTransform.sizeDelta.y, 0.1f);
-    collider.isTrigger = true;
-    
-    // EventCameraは実行時に自動で設定されることが多いが、明示的に設定することも可能
-    // canvasComponent.worldCamera = Camera.main;
-
-    // --- ここまでが変更箇所 ---
-
-    canvasGO.AddComponent<CanvasScaler>(); // scaler自体は残してOK
-    canvasGO.AddComponent<GraphicRaycaster>();
-
-    // 子要素（ボタンやテキスト）の作成
-    GameObject actionPanel = CreateUIPanel(canvasGO.transform, "ActionPanel", new Vector2(700, 500), Vector2.zero);
-    CreateUIButton(actionPanel.transform, "StartAssessmentButton", "診断を開始", new Vector2(0, 150), new Vector2(400, 60));
-    // ...他のボタンも同様に配置
-}
-```
-
-この修正版`VTMSceneBuilder.cs`を使って`vtm_headless_build.sh`を実行すれば、次回以降は自動的に壁面に固定されたUIが生成されます。
-
-## まとめ
-
-| 項目 | 修正内容 |
-| :--- | :--- |
-| **Render Mode** | `Screen Space - Overlay` → **`World Space`** |
-| **Position / Rotation** | ワールド内の壁面に合うように設定 |
-| **Scale** | `(0.005, 0.005, 0.005)` のような微小な値に設定 |
-| **追加コンポーネント** | `VRC Ui Shape`, `Box Collider` (Is Trigger) |
-| **Event Camera** | メインカメラを割り当て（必須） |
-
-上記の手順、特に**手順B**のコード修正を適用することで、ご指摘の問題は完全に解決します。
-
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dd147834-b123-482b-b132-f4b3d16ab185/VTMSceneSetupTool.cs)
-[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/a2504250-969d-4787-a20d-c1bbf740fcf6/tasks.md)
-[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cd4ac24f-7d16-4291-ae51-a2cb5aa526b7/unitymcp.md)
-[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dcb7a649-17bf-42d6-8a25-388c76cbbbd4/publish.md)
-[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d5d4f4b1-a643-41c8-9eab-4c50311695bb/steam.md)
-[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/19106e3d-5b3b-4254-af03-6ec8d0b1582c/IMPLEMENTATION_COMPLETE.md)
-[7](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dff4fa85-28f8-4664-9027-f6973bee93f9/worldcreation.md)
-[8](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/0497b8aa-29d5-4d72-b99d-79db3a2f1432/ProjectSetup.md)
-[9](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d6a8d7b6-81b5-4054-8a8a-b0767a92c0d9/vpm.md)
-[10](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/32db8e30-c4b8-477c-bdc9-18c15e36a245/TROUBLESHOOTING.md)
-[11](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/1f1f78c7-531d-4409-818e-2ae13aa52db6/VTMSceneBuilder.cs)
-[12](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/6a742cfb-e03a-48dd-99e1-234d2519ead7/VTMSystemValidator.cs)
-[13](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/591e98c3-1786-418d-b3c5-041f1e5fcc3d/SafetyController.cs)
-[14](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bce98d8e-2445-4065-962a-2f5301952cef/SessionRoomManager.cs)
-[15](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bfd888aa-807c-4276-bb54-7f260e7a4d76/RecommenderUI.cs)
-[16](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/18522c3e-6d1c-4094-8378-e7c9dbfdc36d/MainUIController.cs)
-
----
-
-## ✅ 完了: 床マテリアルを「白一色＋変化しない」状態に固定する方法
-
-**修正完了**: Mat_FloorWhite_Stable.mat の自動生成と全床オブジェクトへの適用を実装済み。
-
-**実装された修正**:
-- Unlit/Color シェーダーを使用した安定した白マテリアルの自動生成
-- Shadow casting/receiving を無効化してライティング影響を排除
-- 全床オブジェクト（Lobby + Session Rooms）への自動適用
-- VRChat最適化（Quest向け軽量化）済み
-
-### 問題の詳細（解決済み）
-「床が動くたびテクスチャやシェーダー効果が変化して気持ち悪い」症状の原因は:
-
-***
-
-## 1. シェーダー由来の色変化を止める
-
-1. **床オブジェクトを選択**  
-   Hierarchy で Plane（例：`LobbyFloor`）や各 Room の `RoomFloor` をすべて選択。
-
-2. **Inspector → Mesh Renderer → Materials**  
-   既存マテリアルが `Standard`／`URP/Lit`／カスタムシェーダーなどになっていると、ライティングやカメラ角度で色味が変わります。
-
-3. **新規マテリアルを作成**  
-   - Project ビューで右クリック → Create → **Material**  
-   - 名前を `Mat_FloorWhite` などに設定。  
-   - Shader を **Unlit/Color**（URPなら *URP/Unlit*）へ変更。  
-   - Color を **真っ白( #FFFFFF )** にする。  
-   - Metallic, Smoothness などのスライダーは 0 に設定（URP/Lit を使う場合）。
-
-4. **床オブジェクトにドラッグ＆ドロップ**  
-   作成した `Mat_FloorWhite` をすべての床 MeshRenderer の Element0 に適用。
-
-→ Unlit シェーダーはライティングの影響を一切受けないため、動いても色が変わりません。
-
-***
-
-## 2. ライトとポストプロセスの影響を排除する
-
-白一色にしても「影が動いて濃淡が変わる」「ブルームで色温度が変わる」と感じる場合は次の対策を追加します。
-
-### 2-1. Shadow Casting Off
-- 床オブジェクトを選択し、**Mesh Renderer → Lighting**  
-  「Cast Shadows」「Receive Shadows」を **両方 Off**。
-
-### 2-2. Lightmap Static を外す
-- Inspector 上部の **Static** チェックを外し、ベイク済みライトの色変化を防止。
-
-### 2-3. ポストプロセス Volume の確認
-- Project に **Post-processing** パッケージや **URP Volume** がある場合、  
-  Bloom/Color Grading で白が変化していないか確認し、不要なら **Disable**。
-
-***
-
-## 3. 既存シーン自動生成コードに反映する
-
-`VTMSceneBuilder.cs` に以下を追記すると、今後生成される床すべてに **Unlit 白マテリアル**を自動設定できます。
-
-```csharp
-// 最上部に追加
-static Material _whiteMat;
-static Material WhiteMat {
-    get {
-        if (_whiteMat == null) {
-            _whiteMat = new Material(Shader.Find("Unlit/Color"));
-            _whiteMat.color = Color.white;
-            AssetDatabase.CreateAsset(_whiteMat, "Assets/VirtualTokyoMatching/Materials/Mat_FloorWhite.mat");
-        }
-        return _whiteMat;
+    public static class EnumerableExtensions   // ←ネストしている
+    {
+        public static float CosineSimilarity( … ) { … }
     }
 }
-
-// 既存 CreateLobby() 内のロビー床生成直後に追記
-lobbyFloor.GetComponent<Renderer>().sharedMaterial = WhiteMat;
-
-// 既存 CreateSessionRoom() 内の各 Room 床生成直後に追記
-floor.GetComponent<Renderer>().sharedMaterial = WhiteMat;
 ```
-
-これで **再生成される全シーン**の床が Unlit 白固定になります。
+をファイル下部に切り出し、トップレベルへ変更します。  
+```csharp
+namespace VirtualTokyoMatching.Tests
+{
+    public static class EnumerableExtensions
+    {
+        public static float CosineSimilarity( … ) { … }
+    }
+}
+```
+これで CS1109 が一括で解消されます。[7]
 
 ***
 
-## 4. 確認ポイント
+● **すべての *_Tests.cs – CS0246 (UnityTest / UnityTestAttribute)**  
+原因は「テスト用アセンブリ定義 (.asmdef) が Unity Test Framework を参照していない」か  
+「テストスクリプトが実行アセンブリに混入している」ことです。推奨修正手順は次のとおり。  
 
-- VRChat ワールドでは **Unlit シェーダー**が Quest/PC 両対応で最も軽量。  
-- テクスチャ無しの真っ白なので **GPU メモリも 0 MB**。  
-- 影を完全に消すと奥行き感がなくなる場合は、`Receive Shadows`だけ On に戻し、`Directional Light` を弱めに調整すると自然に見えます。
+1. Assets/VirtualTokyoMatching/Tests フォルダー配下に  
+   -  VirtualTokyoMatching.Tests.asmdef  
+   -  VirtualTokyoMatching.Tests.Editor.asmdef  
+   を作成。  
+2. 両 asmdef の References へ  
+   – `UnityEngine.TestRunner`  
+   – `UnityEditor.TestRunner`（Editor 用のみ）  
+   を追加。  
+3. Inspector の Platforms で  
+   – Play Mode テスト用 asmdef: *Editor・StandaloneOnly* を除外  
+   – Editor テスト用 asmdef: *Editor* だけを残す  
+
+こうすると `using UnityEngine.TestTools;` が有効になり、CS0246 が消えます。[7]
+（VRChat 向けビルド時は *Tests アセンブリはリンク対象外* なので、ワールド側には一切影響しません。）
 
 ***
 
-これで「動くたびに見た目が変わって気持ち悪い」問題は解消され、常にフラットな白い床を維持できます。
+【チェックリスト再掲】  
+1. Header 属性：クラス直上ではなくフィールド直上へ。  
+2. 拡張メソッド：トップレベル static クラスへ分離。  
+3. テスト asmdef：Test Runner 参照＋プラットフォームを Editor／PlayMode で分離。  
 
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/a2504250-969d-4787-a20d-c1bbf740fcf6/tasks.md)
-[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cd4ac24f-7d16-4291-ae51-a2cb5aa526b7/unitymcp.md)
-[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dcb7a649-17bf-42d6-8a25-388c76cbbbd4/publish.md)
-[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d5d4f4b1-a643-41c8-9eab-4c50311695bb/steam.md)
-[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/19106e3d-5b3b-4254-af03-6ec8d0b1582c/IMPLEMENTATION_COMPLETE.md)
-[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dff4fa85-28f8-4664-9027-f6973bee93f9/worldcreation.md)
-[7](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/0497b8aa-29d5-4d72-b99d-79db3a2f1432/ProjectSetup.md)
-[8](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d6a8d7b6-81b5-4054-8a8a-b0767a92c0d9/vpm.md)
-[9](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/32db8e30-c4b8-477c-bdc9-18c15e36a245/TROUBLESHOOTING.md)
-[10](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dd147834-b123-482b-b132-f4b3d16ab185/VTMSceneSetupTool.cs)
-[11](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/1f1f78c7-531d-4409-818e-2ae13aa52db6/VTMSceneBuilder.cs)
-[12](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/6a742cfb-e03a-48dd-99e1-234d2519ead7/VTMSystemValidator.cs)
-[13](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/591e98c3-1786-418d-b3c5-041f1e5fcc3d/SafetyController.cs)
-[14](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bce98d8e-2445-4065-962a-2f5301952cef/SessionRoomManager.cs)
-[15](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bfd888aa-807c-4276-bb54-7f260e7a4d76/RecommenderUI.cs)
-[16](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/18522c3e-6d1c-4094-8378-e7c9dbfdc36d/MainUIController.cs)
+上記３点を反映した後に Unity の *Recompile* を実行すれば、一覧に出ている CS0592 / CS1109 / CS0246 系はすべて 0 件になります。
 
-
----
+[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/1a4ef8a2-7940-4387-ab7c-e46714a6241a/world.md)
+[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/3ada51a7-7126-4416-9c27-6124a504e1d2/IMPLEMENTATION_COMPLETE.md)
+[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cb47425d-3b34-43f1-8078-a632c0810f4f/ProjectSetup.md)
+[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d1f19547-3d10-4ace-9cdc-84990582d245/vrchat.md)
+[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/f9234d39-7af4-465b-859b-c61095611b00/archtecture.md)
+[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/750a6506-b37a-4e31-ae72-0b6cea75ea5c/INTEGRATION_GUIDE.md)
+[7](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/2fc38c04-bd12-444b-bdd3-3d76f82118ea/tasks.md)
+[8](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/35c43e8b-b85c-4d44-95b0-9af4c6210cac/publish.md)
+[9](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/4b2e5c72-5160-4c60-8025-a617511d1f27/requirement.md)
+[10](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cbe3d187-1658-4c51-8292-a6a78a57d498/steam.md)
 
 
-## ✅ 完了: シーン内ボタン配置＆VRChatらしいワールド化タスク
+# 主なUnityコンパイル／ビルドエラーと  
+ヘッドレス環境での Claude-Code 修正対象
 
-**修正完了**: VRChat最適化と壁面UI設計を含む包括的な修正を実装済み。
+| エラー分類 | 典型的なメッセージ例 | 原因 | Claude-Code で行うべき自動修正 |
+|---|---|---|---|
+| 1. C# 構文・属性誤用 | `CS0592 Attribute 'Header' is not valid on this declaration type`[1] | 属性をクラス/メソッドなど誤った場所に付与 | ① 該当スクリプトをパースし宣言位置を判定<br>② `Header`, `SerializeField` 等を**フィールド**に移動<br>③ PR とテストを自動生成 |
+| 2. 拡張メソッド定義ミス | `CS1109 Extension methods must be defined in a top level static class`[1] | extension をネストクラス内に記述 | ① クラスを自動抽出し最上位にリファクタ<br>② `static` 修飾子を付与<br>③ 既存 namespace を保持しつつ再配置 |
+| 3. テストフレームワーク参照漏れ | `CS0246 UnityTestAttribute could not be found`[1] | asmdef に `UnityEngine.TestRunner` が無い | ① `Editor` 用 asmdef を検出<br>② `TestRunner` 参照を追加し GUID 解決<br>③ CI で playmode/editor テストを実行 |
+| 4. Unity パッケージ互換違反 | `CS7036 There is no argument given ...`[2] | Collections など新旧 API 差異 | ① `Packages/manifest.json` を静的解析<br>② プロジェクトの Unity バージョンに合わせ<br>   互換パッケージ(例：`com.unity.collections@2.5.7`)へ固定<br>③ 再度 `vpm resolve project .` を呼び出し |
+| 5. TagManager など設定不足 | `Tag: Floor is not defined.`[3] | 自動シーン生成ツールが未登録タグに依存 | ① `ProjectSettings/TagManager.asset` を YAML 直接編集しタグを追加<br>② 変更を git へコミット |
+| 6. asmdef 循環参照・GUID 失効 | `Assembly has reference to unknown assembly` | スクリプト移動で GUID ずれ | ① asmdef ファイルを探索し GUID 再割当<br>② 不要な参照を削除／循環を解消 |
+| 7. Headless ビルド限定の API 呼び出し失敗 | `Graphics device is null in batchmode` | `Camera.main` 等が Awake 前参照 | ① コンポーネントの実行順を meta で調整<br>② `if (Application.isBatchMode)` ガードを自動挿入 |
+| 8. UdonSharp / VRChat SDK 依存欠落 | `[UdonSharp] Could not locate VRChat data directory`[2] | VRChat クライアント未検出 | ① Linux ホストに Steam+Proton で VRChat を自動インストール<br>② SDK パスを環境変数で指定 |
+| 9. Resources 参照不一致 | `NullReferenceException: QuestionDatabase` | SO アセットの `Resources` 置き忘れ | ① 全スクリプトの `Resources.Load<>()` 呼び出しを抽出<br>② 該当パスにテンプレート JSON/SO を生成 |
+| 10. ランタイムのみ発生する null 参照 | `RecommenderUI.UpdateCards() NullReferenceException` | ワイヤリング不足 | ① シーンをヘッドレスロード → `FindObjectsOfType<UdonBehaviour>()` で依存解決<br>② `MissingReference` を自動配線か警告リスト生成 |
 
-**実装された機能**:
-- 壁面固定UIシステム（World Space Canvas）
-- VRChat互換インタラクションシステム
-- Quest対応UI設計（大きなフォント、アウトライン、emissive背景）
-- 自動化されたVRChat fixes適用システム
-- 一括修正コマンド（VTM/Apply All VRChat Fixes）
+## Claude-Code が扱う流れ（ヘッドレス Unity 2022 LTS）
 
-### タスク詳細（実装済み）
-以下の機能はすべて VTMSceneBuilder.cs および関連ツールで実装完了:
+1. **検出**  
+   Unity batchmode (`-quit -batchmode -nographics`) + `-logFile` でビルド。  
+   ログを grep し上記パターンで分類。
 
-## 1. UIキャンバスのワールドスペース化と壁への固定  
-1. Canvasのレンダーモードを **World Space** に変更  
-2. **MainLobbyCanvas** を選択し、壁面に向けて配置  
-   - Position：壁面中央の高さ1.5m、奥行き0.1m以内  
-   - Rotation：壁に対して直立（Z軸を壁法線方向）  
-   - Scale：`0.01,0.01,0.01`  
-3. CanvasScaler を **Constant Pixel Size** に設定  
-4. Raycaster をアタッチし、VRChatでもUI操作を可能に  
+2. **コード or 設定修正**  
+   – Roslyn API または regex で該当 *.cs* を編集  
+   – *.asmdef*, *manifest.json*, *TagManager.asset* を YAML/JSON 操作  
 
-## 2. ボタンレイアウトの壁面固定デザイン  
-1. **StartAssessmentButton**／**ContinueAssessmentButton**／**PublicSharingButton**／**ViewRecommendationsButton**／**GoToRoomButton** を MainLobbyCanvas 配下のパネルに配置  
-2. ボタン群を縦方向に等間隔配置（500px×200px 程度）  
-3. 各ボタンのアンカーを Canvas の左中央（X=0%, Y=50%）に設定  
-4. ボタンの背景に細い枠（LineRenderer もしくは Image）を追加し、壁面UIとして視認性向上  
+3. **再ビルド & 回帰テスト**  
+   修正後にもう一度 batch ビルド → エラーが残ればループ。  
+   成功したら ClientSim のマルチクライアントテストを自動実行。
 
-## 3. インタラクション誘導の視覚演出  
-1. ボタン周囲に **Outline** コンポーネントを追加し、ホバー時に色が変わるよう設定  
-2. ボタン押下時に、**Scale** を `1.0→0.9→1.0` にアニメーションさせる  
-3. **LoadingScreen** は壁面ではなく中央上方にフルスクリーンで表示  
+4. **PR とレポート生成**  
+   Git ブランチを切り commit → PR を作成。  
+   CI でテストグリーンを確認し merge。
 
-## 4. VRChatらしい環境演出＆最適化  
-1. 壁面UIの背後に **Emissive Material（Unlit）** のパネルを配置し、夜間でも視認性確保  
-2. UIパネルには**触れると音が鳴る（AudioSource + Udon）**インタラクションサウンドを設定  
-3. Canvas レイヤーを **UI** に切り分け、**VRC_SceneDescriptor.SpawnOrder** を `Random` にして入場時にUIが順次表示  
-4. モバイルQuest向けに **ドローコールを 10 回以下** に抑えるため、UIパネルを一枚の TextureAtlas にまとめる  
+## 重点ポイント
 
-## 5. タスク実行後の確認項目  
-- 壁面UIが常に固定され、動いても揺れない  
-- ボタンのホバー／クリック時に視覚・聴覚フィードバックが動作  
-- VRCワールドとしてエラーなくアップロード可能  
-- Quest/PC両環境で60FPS以上を維持  
+- **GUI 操作が不要**な YAML/JSON/CS 編集のみをターゲットにし、モデル・テクスチャなどアセット手動調整はスコープ外。  
+- VRChat 独自の **UdonSharp 依存** は SDK バージョン固定で吸収。  
+- PlayerData やネットワーク ID など **ランタイム依存値**はヘッドレスでは Stub を生成して null 参照を防止。  
 
-以上のタスクを完了すると、「VRChat worldらしいUI配置」として高い没入感と操作性を両立できます。
+この 10 分類を自動修正できれば、CLI 環境でもコンパイル・ビルド・テストが無人で通り、Virtual Tokyo Matching の継続的インテグレーションが成立します。
 
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/a2504250-969d-4787-a20d-c1bbf740fcf6/tasks.md)
-[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cd4ac24f-7d16-4291-ae51-a2cb5aa526b7/unitymcp.md)
-[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dcb7a649-17bf-42d6-8a25-388c76cbbbd4/publish.md)
-[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d5d4f4b1-a643-41c8-9eab-4c50311695bb/steam.md)
-[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/19106e3d-5b3b-4254-af03-6ec8d0b1582c/IMPLEMENTATION_COMPLETE.md)
-[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dff4fa85-28f8-4664-9027-f6973bee93f9/worldcreation.md)
-[7](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/0497b8aa-29d5-4d72-b99d-79db3a2f1432/ProjectSetup.md)
-[8](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d6a8d7b6-81b5-4054-8a8a-b0767a92c0d9/vpm.md)
-[9](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/32db8e30-c4b8-477c-bdc9-18c15e36a245/TROUBLESHOOTING.md)
-[10](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/dd147834-b123-482b-b132-f4b3d16ab185/VTMSceneSetupTool.cs)
-[11](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/1f1f78c7-531d-4409-818e-2ae13aa52db6/VTMSceneBuilder.cs)
-[12](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/6a742cfb-e03a-48dd-99e1-234d2519ead7/VTMSystemValidator.cs)
-[13](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/591e98c3-1786-418d-b3c5-041f1e5fcc3d/SafetyController.cs)
-[14](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bce98d8e-2445-4065-962a-2f5301952cef/SessionRoomManager.cs)
-[15](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/bfd888aa-807c-4276-bb54-7f260e7a4d76/RecommenderUI.cs)
-[16](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/18522c3e-6d1c-4094-8378-e7c9dbfdc36d/MainUIController.cs)
+[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/2fc38c04-bd12-444b-bdd3-3d76f82118ea/tasks.md)
+[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/35c43e8b-b85c-4d44-95b0-9af4c6210cac/publish.md)
+[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/301e410f-91e2-427d-bb20-7d8ed969a5c5/TROUBLESHOOTING.md)
+[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/1a4ef8a2-7940-4387-ab7c-e46714a6241a/world.md)
+[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/3ada51a7-7126-4416-9c27-6124a504e1d2/IMPLEMENTATION_COMPLETE.md)
+[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cb47425d-3b34-43f1-8078-a632c0810f4f/ProjectSetup.md)
+[7](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d1f19547-3d10-4ace-9cdc-84990582d245/vrchat.md)
+[8](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/f9234d39-7af4-465b-859b-c61095611b00/archtecture.md)
+[9](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/750a6506-b37a-4e31-ae72-0b6cea75ea5c/INTEGRATION_GUIDE.md)
+[10](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/4b2e5c72-5160-4c60-8025-a617511d1f27/requirement.md)
+[11](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/cbe3d187-1658-4c51-8292-a6a78a57d498/steam.md)
+[12](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/4f520424-3297-4ffc-9632-7d2452c5b135/unitymcp.md)
+[13](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/68064914-a3cd-44b0-acc7-35f79db4bfcb/CONFIGURATION_TEMPLATES.md)
+[14](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/f49bd91b-28bf-4597-91af-163c61dae1c6/design.md)
+[15](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/f4755e25-0c04-4831-a783-b5b5ec099348/devenv.md)
+[16](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/9dff22f2-61e9-43ac-9f43-8fd3f5fb2dfe/worldspacedesign.md)
+[17](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/d622ef79-ab70-46a5-b9f4-d3debaf1ebed/SCENE_SETUP.md)
+[18](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/060e6c40-6c19-42f4-bcf2-01e97071b36f/worldcreation.md)
+[19](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/52522745/b54c92f6-3443-4ca8-9528-27c7dc5e8296/vpm.md)

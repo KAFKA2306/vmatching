@@ -153,7 +153,7 @@ Assets/VirtualTokyoMatching/
 [CreateAssetMenu(fileName = "QuestionDatabase", menuName = "VTM/Question Database")]
 public class QuestionDatabase : ScriptableObject
 {
-    [Header("Assessment Questions")]
+    [Header("Assessment Questions")]  // ✅ Correct: on field
     public Question[] questions = new Question[112];
     
     [System.Serializable]
@@ -164,6 +164,43 @@ public class QuestionDatabase : ScriptableObject
         public string[] choices = new string[5];
         public int targetAxis; // 0-29
         public float[] weights = new float[5];
+    }
+}
+```
+
+## Critical Attribute Usage Rules
+
+### Header Attributes (CS0592 Prevention)
+```csharp
+// ❌ WRONG: Header on class/method
+[Header("Player Data")]
+public class PlayerDataManager : UdonSharpBehaviour
+
+// ✅ CORRECT: Header on field only
+public class PlayerDataManager : UdonSharpBehaviour
+{
+    [Header("Player Data")]
+    public PlayerData currentPlayer;
+}
+```
+
+### Extension Method Placement (CS1109 Prevention)
+```csharp
+// ❌ WRONG: Extension methods in nested class
+public class MyTests
+{
+    public static class EnumerableExtensions  // Nested - causes CS1109
+    {
+        public static float CosineSimilarity(this float[] a, float[] b) { }
+    }
+}
+
+// ✅ CORRECT: Extension methods at namespace level
+namespace VirtualTokyoMatching.Tests
+{
+    public static class EnumerableExtensions  // Top-level - works correctly
+    {
+        public static float CosineSimilarity(this float[] a, float[] b) { }
     }
 }
 ```
@@ -180,6 +217,39 @@ public class QuestionDatabase : ScriptableObject
 - **Incremental updates**: Process data in small chunks per frame
 - **Event-driven recalculation**: Only recalculate when data changes
 
+## Assembly Definition Requirements
+
+### Test Assembly Structure (CS0246 Prevention)
+```json
+// VirtualTokyoMatching.Tests.asmdef
+{
+    "name": "VirtualTokyoMatching.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "VirtualTokyoMatching"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": ["Editor"],
+    "allowUnsafeCode": false
+}
+```
+
+### Unity Test Framework Usage
+```csharp
+// Correct test imports
+using UnityEngine;
+using UnityEngine.TestTools;  // For UnityTest attribute
+using NUnit.Framework;        // For Test attribute
+
+[UnityTest]  // Now resolves correctly with proper .asmdef
+public IEnumerator TestPlayerDataSave()
+{
+    // Test implementation
+    yield return null;
+}
+```
+
 ## Security and Privacy
 
 ### Data Protection
@@ -192,9 +262,25 @@ public class QuestionDatabase : ScriptableObject
 - **Content guidelines**: Age-appropriate, consent-based interactions
 - **Moderation support**: Integration with VRChat's blocking/muting systems
 
+## Common Compilation Error Patterns
+
+### CS0592 - Attribute Usage
+- **Cause**: `[Header]`, `[SerializeField]` on classes/methods instead of fields
+- **Fix**: Move attributes to field declarations only
+
+### CS1109 - Extension Methods  
+- **Cause**: Extension methods in nested/inner classes
+- **Fix**: Move to top-level static classes in namespace
+
+### CS0246 - Missing References
+- **Cause**: Missing UnityEngine.TestRunner in .asmdef files
+- **Fix**: Add proper assembly definition files with correct references
+
 ## Prohibited Patterns
 - ❌ **Manual profile creation**: All personality data must be auto-generated
 - ❌ **Raw data exposure**: Never sync 30D vectors or raw answers
 - ❌ **External dependencies**: No APIs, databases, or web services
 - ❌ **Blocking operations**: No synchronous heavy computations
 - ❌ **Free-form text input**: Prevent inappropriate content through design
+- ❌ **Attributes on classes**: Header/SerializeField only on fields
+- ❌ **Nested extension methods**: Always use top-level static classes

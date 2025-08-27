@@ -815,118 +815,122 @@ namespace VirtualTokyoMatching.Tests
             return matches;
         }
 
-        // LINQ-like helper extensions for Unity testing
-        private static class EnumerableExtensions
+
+        #endregion
+    }
+}
+
+// LINQ-like helper extensions for Unity testing - extracted to top level to avoid CS1109
+namespace VirtualTokyoMatching.Tests
+{
+    internal static class EnumerableExtensions
+    {
+        public static IEnumerable<T> Skip<T>(this IEnumerable<T> source, int count)
         {
-            public static IEnumerable<T> Skip<T>(this IEnumerable<T> source, int count)
+            int skipped = 0;
+            foreach (var item in source)
             {
-                int skipped = 0;
-                foreach (var item in source)
-                {
-                    if (skipped++ >= count)
-                        yield return item;
-                }
-            }
-
-            public static T First<T>(this IEnumerable<T> source)
-            {
-                foreach (var item in source)
-                    return item;
-                throw new System.InvalidOperationException("Sequence contains no elements");
-            }
-
-            public static T First<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
-            {
-                foreach (var item in source)
-                {
-                    if (predicate(item))
-                        return item;
-                }
-                throw new System.InvalidOperationException("No element satisfies the condition");
-            }
-
-            public static float Average<T>(this IEnumerable<T> source, System.Func<T, float> selector)
-            {
-                float sum = 0f;
-                int count = 0;
-                foreach (var item in source)
-                {
-                    sum += selector(item);
-                    count++;
-                }
-                return count > 0 ? sum / count : 0f;
-            }
-
-            public static bool All<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
-            {
-                foreach (var item in source)
-                {
-                    if (!predicate(item))
-                        return false;
-                }
-                return true;
-            }
-
-            public static bool Any<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
-            {
-                foreach (var item in source)
-                {
-                    if (predicate(item))
-                        return true;
-                }
-                return false;
-            }
-
-            public static List<T> Take<T>(this List<T> source, int count)
-            {
-                var result = new List<T>();
-                for (int i = 0; i < count && i < source.Count; i++)
-                {
-                    result.Add(source[i]);
-                }
-                return result;
-            }
-
-            public static IEnumerable<TResult> Select<T, TResult>(this IEnumerable<T> source, System.Func<T, TResult> selector)
-            {
-                foreach (var item in source)
-                {
-                    yield return selector(item);
-                }
-            }
-
-            public static IEnumerable<T> OrderBy<T>(this IEnumerable<T> source, System.Func<T, float> keySelector)
-            {
-                var list = new List<T>();
-                foreach (var item in source)
-                    list.Add(item);
-
-                // Simple sort
-                for (int i = 0; i < list.Count - 1; i++)
-                {
-                    for (int j = 0; j < list.Count - i - 1; j++)
-                    {
-                        if (keySelector(list[j]) > keySelector(list[j + 1]))
-                        {
-                            var temp = list[j];
-                            list[j] = list[j + 1];
-                            list[j + 1] = temp;
-                        }
-                    }
-                }
-
-                return list;
-            }
-
-            public static T[] ToArray<T>(this IEnumerable<T> source)
-            {
-                var list = new List<T>();
-                foreach (var item in source)
-                    list.Add(item);
-                return list.ToArray();
+                if (skipped++ >= count)
+                    yield return item;
             }
         }
 
-        #endregion
+        public static T First<T>(this IEnumerable<T> source)
+        {
+            foreach (var item in source)
+                return item;
+            throw new System.InvalidOperationException("Sequence contains no elements");
+        }
+
+        public static T First<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
+        {
+            foreach (var item in source)
+            {
+                if (predicate(item))
+                    return item;
+            }
+            throw new System.InvalidOperationException("No element satisfies the condition");
+        }
+
+        public static float Average<T>(this IEnumerable<T> source, System.Func<T, float> selector)
+        {
+            float sum = 0f;
+            int count = 0;
+            foreach (var item in source)
+            {
+                sum += selector(item);
+                count++;
+            }
+            return count > 0 ? sum / count : 0f;
+        }
+
+        public static bool All<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
+        {
+            foreach (var item in source)
+            {
+                if (!predicate(item))
+                    return false;
+            }
+            return true;
+        }
+
+        public static bool Any<T>(this IEnumerable<T> source, System.Func<T, bool> predicate)
+        {
+            foreach (var item in source)
+            {
+                if (predicate(item))
+                    return true;
+            }
+            return false;
+        }
+
+        public static List<T> Take<T>(this List<T> source, int count)
+        {
+            var result = new List<T>();
+            for (int i = 0; i < count && i < source.Count; i++)
+            {
+                result.Add(source[i]);
+            }
+            return result;
+        }
+
+        public static IEnumerable<TResult> Select<T, TResult>(this IEnumerable<T> source, System.Func<T, TResult> selector)
+        {
+            foreach (var item in source)
+            {
+                yield return selector(item);
+            }
+        }
+
+        public static IEnumerable<T> OrderBy<T>(this IEnumerable<T> source, System.Func<T, float> keySelector)
+        {
+            var list = new List<T>();
+            foreach (var item in source)
+                list.Add(item);
+
+            // Simple sort
+            for (int i = 0; i < list.Count - 1; i++)
+            {
+                for (int j = 0; j < list.Count - i - 1; j++)
+                {
+                    if (keySelector(list[j]) > keySelector(list[j + 1]))
+                    {
+                        var temp = list[j];
+                        list[j] = list[j + 1];
+                        list[j + 1] = temp;
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        public static T[] ToArray<T>(this IEnumerable<T> source)
+        {
+            var list = new List<T>();
+            foreach (var item in source)
+                list.Add(item);
+            return list.ToArray();
+        }
     }
 }

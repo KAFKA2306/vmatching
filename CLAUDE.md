@@ -4,145 +4,205 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Virtual Tokyo Matching is a unityhub-based VRChat world for matchmaking using automated personality analysis. Built with Unity 2022 LTS + VCC, SDK3 Worlds, and UdonSharp.
+Virtual Tokyo Matching is a Unity-based VRChat world implementing personality-based matchmaking through a 112-question assessment. Built with Unity 2022.3 LTS + VRChat Creator Companion (VCC) + SDK3 Worlds + UdonSharp on Ubuntu 22.04 LTS.
+
+## Current Project Status - CRITICAL
+
+**❌ COMPILATION BLOCKED**: The project has 84+ compilation errors that must be fixed before any Unity operations:
+
+1. **CS0592 Errors**: `[Header]` attributes placed on classes instead of fields
+2. **CS1109 Errors**: Extension methods defined in nested classes instead of top-level
+3. **CS0246 Errors**: Missing UnityEngine.TestRunner references in test assemblies
+
+**Priority**: Fix compilation errors before scene creation, building, or testing.
+
+## Essential Development Commands
+
+### Immediate Error Resolution
+```bash
+# Check compilation status
+~/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -quit -batchmode -nographics -logFile ./compile_check.log -projectPath .
+
+# Count errors by type  
+grep "CS0592" compile_check.log | wc -l  # Header attribute errors
+grep "CS1109" compile_check.log | wc -l  # Extension method errors
+grep "CS0246" compile_check.log | wc -l  # Test framework errors
+```
+
+### VPM Project Management
+```bash
+# Verify project structure and dependencies
+vpm check project .
+vpm list packages -p .
+vpm resolve project .
+
+# Essential VRChat packages (already configured)
+vpm add package com.vrchat.worlds -p .
+vpm add package com.vrchat.udonsharp -p .  
+vpm add package com.vrchat.clientsim -p .
+```
+
+### Unity Operations (After Compilation Fixed)
+```bash
+# Unity Editor launch
+~/Unity/Hub/Editor/2022.3.22f1/Editor/Unity -projectPath ~/projects/VirtualTokyoMatching
+
+# Headless Unity operations
+Unity -quit -batchmode -nographics -logFile ./unity_operations.log -projectPath .
+
+# Automated world creation (when compilation passes)
+Unity -batchmode -quit -projectPath . -executeMethod VirtualTokyoMatching.Editor.VTMSceneBuilder.CreateCompleteWorld -logFile ./world_creation.log
+```
+
+### Project Setup Scripts
+```bash
+# Complete project setup (located in sh/ directory)
+sh/setup_unity_project.sh           # Initial VCC/VPM setup
+sh/vtm_headless_build.sh            # Automated world creation
+sh/test_vrchat_setup.sh             # VRChat SDK validation
+sh/configure_vrchat_build_settings.sh # VRChat-specific settings
+```
 
 ## Core Architecture
 
-The system is a self-contained VRChat world with no external APIs/databases supporting **progressive matching** - users can see recommendations even with incomplete questionnaires. Key components:
+**Event-driven UdonSharp system** with 9 main components:
 
-- **PlayerDataManager**: Handles persistent data for each user (questions 1-112, 30D vectors, flags)
-- **DiagnosisController**: Manages the 112-question personality assessment with auto-save/resume
-- **VectorBuilder**: Performs incremental vector updates on each answer, with provisional vectors for partial responses and final normalization on completion
-- **PublicProfilePublisher**: Manages public visibility toggle, broadcasts 6D condensed data with progress indicators and provisional flags
-- **CompatibilityCalculator**: Event-driven cosine similarity computation with queued recalculation on answer updates
-- **RecommenderUI**: Displays top 3 compatibility matches with provisional badges and progress percentages
-- **SessionRoomManager**: Handles 1-on-1 private room teleportation and 15-minute timers
-- **ValuesSummaryGenerator**: Creates personality summaries from vectors (no manual profiles)
-- **PerfGuard**: Frame-limited distributed processing with incremental recalculation triggers
+- **PlayerDataManager**: Persistent storage for 112 questions + 30D vectors (private data only)
+- **DiagnosisController**: Assessment UI with pause/resume, auto-save on each answer
+- **VectorBuilder**: Incremental 30D vector updates, provisional vectors during assessment
+- **PublicProfilePublisher**: Privacy-controlled 30D→6D compression for public matching
+- **CompatibilityCalculator**: Distributed cosine similarity computation, top 3 selection
+- **RecommenderUI**: Match display with provisional badges, progress indicators
+- **SessionRoomManager**: 1-on-1 private rooms, 15-minute timers, teleportation
+- **ValuesSummaryGenerator**: Auto-generated personality descriptions (no manual profiles)
+- **PerfGuard**: Frame budget management, distributed processing controller
 
-## Data Design
+**Communication Pattern**: Components communicate exclusively via UdonSharp events, no direct references.
 
-### PlayerData (Private, per-user)
-- `diag_q_001` through `diag_q_112`: int (0-5, 0 = unanswered)
-- `vv_0` through `vv_29`: float (-1.0 to +1.0) - provisional updates during answering, normalized on completion
-- `flags`: int (bitfield: public ON=1, provisional public allowed=2, etc.)
-- `act_last_active`: int (activity timestamp)
+## UdonSharp and VRChat Constraints
 
-### Public Sync Data (when user opts in, including provisional)
-- `red_0` through `red_5`: float (6D condensed vectors via fixed projection matrix P)
-- `tags`: string (auto-generated personality tags)
-- `headline`: string (auto-generated summary text)
-- `display_name`: string (no free-form profiles allowed)
-- `partial_flag`: bool (indicates provisional/incomplete data)
-- `progress`: int (0-112) or `progress_pct`: float (0-1) for completion percentage
+### Critical Code Requirements
+```csharp
+// All scripts MUST inherit from UdonSharpBehaviour
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class ExampleScript : UdonSharpBehaviour
 
-## Key Constraints
-
-- **Performance**: PC ≥72FPS, Quest ≥60FPS, sizes PC<200MB/Quest<100MB
-- **Privacy**: Raw answers and 30D vectors never exposed to others, only 6D condensed data
-- **No External Dependencies**: Everything must work within VRChat world constraints
-- **No Manual Profiles**: All personality data is auto-generated from questionnaire responses
-- **Session-only Images**: Avatar snapshots shown only during active sessions, not persisted
-
-## Progressive Matching System
-
-**Key Innovation**: Users see recommendations and can start conversations even with incomplete questionnaires.
-
-- **Incremental Vector Updates**: Each answer immediately updates provisional 30D vectors (zero-filled for unanswered questions)
-- **Event-Driven Recalculation**: Answer confirmations trigger queued compatibility recalculation for all affected users
-- **Provisional UI Indicators**: Recommendation cards show "provisional" badges and progress percentages
-- **Graduated Confidence**: Earlier answers have higher weight; provisional vectors have naturally lower norms in cosine similarity
-
-## Performance Architecture
-
-- **Frame Budget**: K operations per frame limit with distributed processing
-- **Incremental Updates**: Only recalculate compatibility when vectors change (answer events, user join/leave, visibility toggle)
-- **6D Compression**: Public matching uses compressed vectors (30D→6D via fixed projection matrix P)
-- **Memory Constraints**: PC<200MB, Quest<100MB total world size
-
-## 実装状況（Implementation Status）
-
-プロジェクトは設計完了・実装段階にあります：
-
-- ✅ **Core Scripts**: 9/9 complete - All main components implemented
-- ❌ **Unity Project**: Not initialized (requires VCC setup)  
-- ❌ **3D Scenes**: UI prefabs and world geometry pending
-- ✅ **Architecture**: Event-driven, distributed processing ready
-
-### 実装済みコンポーネント
-- **PlayerDataManager**: PlayerData永続化・復元・リトライ機構
-- **DiagnosisController**: 112問UI・中断再開・自動前進  
-- **VectorBuilder**: 30D暫定ベクトル・増分更新・正規化
-- **PublicProfilePublisher**: 30D→6D縮約・同期配布・公開制御
-- **CompatibilityCalculator**: コサイン類似度・分散計算・上位3件選出
-- **PerfGuard**: FPS監視・計算予算管理・適応的スロットリング
-- **RecommenderUI**: 推薦カード・詳細UI・暫定バッジ・招待機能
-- **SessionRoomManager**: 1on1個室管理・招待システム・15分タイマー
-- **ValuesSummaryGenerator**: 30Dから自動要約生成
-
-## Development Workflow
-
-開発は Unity 2022 LTS + VCC + SDK3 Worlds + UdonSharp 構成で進めます：
-
-### 必須セットアップ手順
-1. **VCC Setup**: VRChat Creator Companion で SDK3 Worlds プロジェクト作成
-2. **UdonSharp**: UdonSharp パッケージ導入
-3. **Scripts Integration**: Assets/VirtualTokyoMatching/Scripts/ を Unity Project に配置
-4. **Scene Creation**: UI Prefab・3D空間・テレポートポイント配置  
-5. **Multi-client Testing**: エディタ複窓でのマルチプレイヤーテスト
-
-### テスト・ビルドコマンド
-```bash
-# Unity エディタでの複窓テスト（同期挙動検証）
-Unity.exe -projectPath . -username player1 &
-Unity.exe -projectPath . -username player2 &
-
-# Quest向けビルド（Android）
-Unity -buildTarget Android -projectPath .
-
-# PC向けビルド（Windows64）
-Unity -buildTarget StandaloneWindows64 -projectPath .
+// Required imports for all UdonSharp scripts
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.Udon;
 ```
 
-## VRChat固有の制約・要件
+### Compilation Error Patterns to Avoid
+```csharp
+// ❌ CS0592: Header on class (WRONG)
+[Header("Configuration")]
+public class MyClass : UdonSharpBehaviour
 
-### 同期変数・帯域制限
-- **同期変数上限**: ~40個（現在red_0..5+meta=9個使用）
-- **PlayerData容量**: キー長制限・値型制限（現在112+30+meta=約150キー）
-- **帯域制限**: RequestSerialization頻度制御・Late-joiner対応必須
+// ✅ Header on field (CORRECT)
+public class MyClass : UdonSharpBehaviour 
+{
+    [Header("Configuration")]
+    public GameObject target;
+}
 
-### UdonSharp制限
-- **System.Collections制限**: Generic collections一部制限あり
-- **非同期処理制限**: コルーチン・Task非対応
-- **Quest制限**: 100MB容量・60FPS目標・モバイルGPU対応シェーダー
+// ❌ CS1109: Nested extension methods (WRONG)
+public class TestClass
+{
+    public static class Extensions { /* methods */ }
+}
 
-### 品質ゲート（Quality Gates）
-- PlayerData キー互換性テスト
-- 30ユーザー同時接続負荷テスト
-- Quest 60FPS・PC 72FPS 達成確認
-- Public公開前 Friends+ 1週間検証
+// ✅ Top-level extension methods (CORRECT)
+namespace VirtualTokyoMatching.Tests
+{
+    public static class Extensions { /* methods */ }
+}
+```
 
-## 重要な開発指針
+### VRChat SDK Limitations
+- **No System.Collections Generic**: Use arrays and manual iteration
+- **No async/await**: Use frame-distributed processing with PerfGuard
+- **No LINQ**: Manual filtering and aggregation required
+- **Sync Variable Limit**: ~40 variables max (currently using 9)
 
-### Claude Code利用時の制約
-- UdonSharp対応コード生成を最優先とする
-- 同期変数の追加・変更は最小限に留める
-- PlayerDataキー管理の互換性を重視する  
-- 外部API/DB連携は完全禁止
-- VRChat SDK3 Worlds制約内での実装に限定
+## Data Architecture
 
-### 禁止事項
-- 外部API/DB連携の追加
-- 他ユーザーPlayerData書き込み
-- 長文自由記述UIの導入
-- 画像の永続保存
-- 6D縮約を超える生データ公開
+### Private PlayerData (Never Synchronized)
+- **Questions**: `diag_q_001` through `diag_q_112` (int: 0-5, 0=unanswered)
+- **Vectors**: `vv_0` through `vv_29` (float: -1.0 to +1.0, full personality vector)  
+- **Flags**: Privacy settings, provisional flags, activity timestamps
 
-## Configuration Management
+### Public Sync Data (Privacy-Controlled)
+- **Compressed Vectors**: `red_0` through `red_5` (6D condensed via projection matrix)
+- **Generated Content**: Auto-generated personality tags and headlines only
+- **Progress Indicators**: Completion percentage, provisional flags for incomplete data
 
-All data externalized as ScriptableObjects for runtime updates without rebuilds:
-- 112 questions and answer choices
-- Weight matrix W (112→30D transformation) 
-- Projection matrix P (30D→6D public compression)
-- Summary templates for auto-generated personality descriptions
-- Performance parameters (K operations per frame, compatibility recalculation triggers)
+**Critical Privacy Rule**: Raw answers and 30D vectors never leave user's device.
+
+## Performance Targets
+
+- **PC**: ≥72 FPS, <200MB world size, <5s full recalculation
+- **Quest**: ≥60 FPS, <100MB world size, <10s full recalculation  
+- **Frame Budget**: K operations per frame limit with PerfGuard throttling
+- **Network**: Event-driven sync updates only, no polling or timers
+
+## Directory Structure
+
+```
+Assets/VirtualTokyoMatching/
+├── Scripts/
+│   ├── Core/          # PlayerDataManager, system foundations
+│   ├── Assessment/    # DiagnosisController, questionnaire UI
+│   ├── Vector/        # VectorBuilder, mathematical operations
+│   ├── Matching/      # CompatibilityCalculator, algorithms  
+│   ├── UI/            # RecommenderUI, main interface controllers
+│   ├── Session/       # SessionRoomManager, private rooms
+│   ├── Sync/          # PublicProfilePublisher, networking
+│   ├── Performance/   # PerfGuard, optimization systems
+│   ├── Analysis/      # ValuesSummaryGenerator, text generation
+│   ├── Safety/        # Privacy controls, safety systems
+│   ├── Editor/        # Unity Editor tools, automated builders
+│   └── Testing/       # Validation, debugging tools
+├── ScriptableObjects/ # External configuration data
+├── Resources/         # Template JSON files for configuration
+└── Tests/             # Automated testing (currently broken - CS errors)
+```
+
+## Configuration System
+
+All runtime data externalized as ScriptableObjects:
+- **QuestionDatabase**: 112 questions, 5 choices each, axis mappings, weights
+- **VectorConfiguration**: 112→30D weight matrix W, 30D→6D projection matrix P
+- **SummaryTemplates**: Auto-generation templates for personality descriptions
+- **PerformanceSettings**: Frame budgets, FPS targets, optimization parameters
+
+## Development Priority Order
+
+1. **Fix Compilation Errors** (blocking everything else)
+   - Move `[Header]` attributes from classes to fields
+   - Extract extension methods to top-level namespaces
+   - Create proper .asmdef files with TestRunner references
+
+2. **Unity Scene Integration** (after compilation passes)
+   - Run automated scene builder: `VTMSceneBuilder.CreateCompleteWorld`
+   - Configure VRC_SceneDescriptor and spawn points
+   - Wire UdonSharp components in Inspector
+
+3. **VRChat SDK Integration**
+   - Import VRChat SDK3 Worlds package
+   - Configure build settings for PC and Quest targets  
+   - Test with ClientSim multi-user simulation
+
+4. **Performance Validation**
+   - Multi-client testing with Unity Editor instances
+   - Frame rate and memory profiling
+   - VRChat world upload and testing
+
+## Prohibited Patterns
+
+- **External APIs**: No web services, databases, or network calls outside VRChat
+- **Manual Profiles**: All personality content must be auto-generated from assessments
+- **Raw Data Exposure**: Never sync 30D vectors or individual question answers
+- **Free-form Text**: No user text input to prevent inappropriate content
+- **Blocking Operations**: All heavy computation must be frame-distributed

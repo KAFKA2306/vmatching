@@ -23,7 +23,6 @@ namespace VirtualTokyoMatching
         [Header("Assessment Questions")]
         public Question[] questions = new Question[112];
 
-        [Header("Validation")]
         public bool ValidateDatabase()
         {
             if (questions.Length != 112)
