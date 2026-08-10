@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VRで一緒に遊ぶ仲間を、遊び方・人数・時間・プラットフォームから探す非公式UIプロトタイプ。">
+  <title>あそび募集 | Virtual Tokyo Matching</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="あそび募集 ホーム">
+      <span class="brand-mark" aria-hidden="true">V</span>
+      <span><strong>あそび募集</strong><small>一緒に遊ぶ仲間を見つけよう</small></span>
+    </a>
+    <form class="search" id="searchForm" role="search">
+      <label class="sr-only" for="searchInput">募集を検索</label>
+      <input id="searchInput" type="search" placeholder="ワールド名・ゲーム名・タグで検索">
+      <button type="submit">検索</button>
+    </form>
+    <button class="primary" id="createButton">＋ 募集を作成</button>
+  </header>
+
+  <nav class="tabs" aria-label="メインナビゲーション">
+    <button class="tab active" data-tab="home">ホーム</button>
+    <button class="tab" data-tab="list">募集一覧</button>
+    <button class="tab" data-tab="saved">お気に入り</button>
+    <button class="tab" data-tab="planned">参加予定</button>
+  </nav>
+
+  <main id="top" class="layout">
+    <aside class="filters" aria-label="絞り込み">
+      <div class="section-head"><h2>絞り込み</h2><button id="resetFilters" class="link">リセット</button></div>
+      <fieldset>
+        <legend>遊びの種類</legend>
+        <label><input type="checkbox" name="kind" value="雑談・交流" checked> 雑談・交流</label>
+        <label><input type="checkbox" name="kind" value="ワールド探索" checked> ワールド探索</label>
+        <label><input type="checkbox" name="kind" value="ゲーム" checked> ゲーム</label>
+        <label><input type="checkbox" name="kind" value="撮影" checked> 撮影</label>
+      </fieldset>
+      <fieldset>
+        <legend>プラットフォーム</legend>
+        <label><input type="checkbox" name="platform" value="PC" checked> VR / PC</label>
+        <label><input type="checkbox" name="platform" value="Quest" checked> VR / Quest</label>
+        <label><input type="checkbox" name="platform" value="Desktop" checked> デスクトップ</label>
+      </fieldset>
+      <fieldset>
+        <legend>人数</legend>
+        <div class="chips" id="sizeFilters">
+          <button type="button" data-size="small">1〜3人</button>
+          <button type="button" data-size="medium" class="selected">4〜10人</button>
+          <button type="button" data-size="large">11人以上</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>時間</legend>
+        <div class="chips" id="timeFilters">
+          <button type="button" data-time="now" class="selected">今すぐ</button>
+          <button type="button" data-time="today">今日</button>
+          <button type="button" data-time="later">今週末以降</button>
+        </div>
+      </fieldset>
+    </aside>
+
+    <section class="content" aria-live="polite">
+      <div class="hero">
+        <div><span class="eyebrow">SOCIAL VR DISCOVERY</span><h1>新しい仲間と、次のVR体験を。</h1><p>遊び方と時間が合う募集だけを、少ない操作で見つける。</p></div>
+        <div class="hero-orbs" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div class="section-head"><div><h2>おすすめの募集</h2><p id="resultSummary"></p></div><select id="sortSelect" aria-label="並び順"><option value="recommended">おすすめ順</option><option value="soon">開始が早い順</option><option value="open">空き人数が多い順</option></select></div>
+      <div id="listingContainer" class="listing-stack"></div>
+      <div id="emptyState" class="empty" hidden><h3>条件に合う募集がありません</h3><p>絞り込みを減らすか、検索語を変更してください。</p></div>
+    </section>
+
+    <aside class="rail">
+      <section class="panel"><h2>クイックアクション</h2><div class="quick-grid"><button id="quickCreate">＋<span>募集を作成</span></button><button id="randomJoin">◇<span>ランダム参加</span></button><button id="showSaved">♡<span>お気に入り</span></button><button id="guideButton">？<span>使い方</span></button></div></section>
+      <section class="panel"><div class="section-head"><h2>注目のイベント</h2><span class="badge">8/10</span></div><div class="event-card"><div class="event-art">BasisVR</div><h3>週末ナイトフェス</h3><p>21:00〜 / 最大50人</p><button class="primary wide">参加する</button></div></section>
+      <section class="panel"><h2>人気のタグ</h2><div class="tag-cloud"><button>#初心者歓迎</button><button>#雑談</button><button>#まったり</button><button>#ワールド巡り</button><button>#ゲーム</button><button>#撮影会</button><button>#JP</button><button>#VCあり</button></div></section>
+    </aside>
+  </main>
+
+  <dialog id="createDialog">
+    <form method="dialog" id="createForm">
+      <div class="section-head"><h2>募集を作成</h2><button value="cancel" class="icon-button" aria-label="閉じる">×</button></div>
+      <label>タイトル<input id="newTitle" required maxlength="60" placeholder="例：森のワールドをのんびり散歩"></label>
+      <label>種類<select id="newKind"><option>雑談・交流</option><option>ワールド探索</option><option>ゲーム</option><option>撮影</option></select></label>
+      <label>プラットフォーム<select id="newPlatform"><option>PC</option><option>Quest</option><option>Desktop</option></select></label>
+      <label>最大人数<input id="newCapacity" type="number" min="2" max="80" value="8"></label>
+      <label>ひとこと<textarea id="newDescription" maxlength="140" placeholder="初心者歓迎、VC任意など"></textarea></label>
+      <div class="dialog-actions"><button value="cancel" class="secondary">キャンセル</button><button id="submitCreate" value="default" class="primary">作成する</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="guideDialog"><div class="guide"><div class="section-head"><h2>3ステップで参加</h2><button id="closeGuide" class="icon-button">×</button></div><ol><li>遊び方・人数・時間を選ぶ</li><li>募集カードで内容と空き人数を確認</li><li>「参加する」で参加予定へ追加</li></ol><p class="muted">この画面は BasisVR 公式サービスではなく、Virtual Tokyo Matching の非公式UIプロトタイプです。</p></div></dialog>
+
+  <footer><span>Virtual Tokyo Matching — あそび募集 prototype</span><a href="https://github.com/KAFKA2306/vmatching">GitHub</a></footer>
+  <script src="./app.js"></script>
+</body>
+</html>
