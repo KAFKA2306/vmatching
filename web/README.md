@@ -28,7 +28,13 @@ python -m http.server 8000
 
 ## GitHub Pages
 
-2026-08-10 時点で、このrepositoryの GitHub Pages API は `404 Not Found` を返しており、Pages site は有効化されていません。`web/` は静的ファイルだけで構成しているため、Pagesを有効化すればそのまま公開対象にできます。
+公開は `.github/workflows/pages.yml` から GitHub Actions / GitHub Pages を使用します。`web/` を Pages artifact としてアップロードするため、公開用ファイルを repository root や `docs/` へ複製しません。
+
+初回のみ repository の **Settings → Pages → Build and deployment → Source** で **GitHub Actions** を選択して Pages site を有効化します。その後は `main` の `web/` 配下（READMEを除く）が更新されるたびに自動デプロイされます。手動実行も `workflow_dispatch` から可能です。
+
+想定公開URL:
+
+`https://kafka2306.github.io/vmatching/`
 
 ## 注意
 
