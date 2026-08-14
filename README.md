@@ -1,74 +1,200 @@
-# Virtual Tokyo Matching – VRChat World
+# Virtual Tokyo Matching
 
-## 概要
-Virtual Tokyo Matching は、112問の性格診断を基盤に、回答途中からでも暫定ベクトルで推薦が進む「即時対話到達」型のマッチング体験を提供するVRChatワールド実装である。診断は30軸ベクトルに集約し、公開時は6軸縮約＋タグ／見出しのみを同期するプライバシー設計を採用している。[3][4][1]
+**相性を探したい。でも、112問の回答そのものを他人へ公開したくはない。**
 
-## 主な特徴
-- 112問・5択の進捗再開対応診断、回答確定ごとの自動保存と暫定ベクトル更新により、途中でも推薦と1on1導線へ進める。[4][1]
-- 30D→6D縮約を前提にコサイン類似度で上位3件を算出し、イベント駆動かつPerfGuardでフレーム負荷を抑えた分散計算を行う。[1][3]
-- 公開は同意ベースで6軸縮約＋タグ/見出しのみ、緊急非表示・即時非公開・データリセットなどの安全UIを完備する。[4][1]
+Virtual Tokyo Matching は、VRChat内で性格診断を進めながら、**必要以上の個人情報を公開せずに「話してみたい相手」へ到達する**ことを目指すmatching systemです。
 
-## アーキテクチャ
-- コア構成: PlayerDataManager／DiagnosisController／VectorBuilder／PublicProfilePublisher／CompatibilityCalculator／RecommenderUI／SessionRoomManager／ValuesSummaryGenerator／PerfGuard／SafetyController でイベント駆動連携する。[3][1]
-- データ流: 回答→30D→6D→類似度→上位カード→1on1へ遷移し、保存は自分のPlayerDataのみ、公開同期は縮約データのみに限定する。[1][3]
+repositoryには診断、30D→6D vector、推薦、公開profile、安全UI、1on1 session、performance guard、scene setup / validator、testsの実装が存在します。一方、公開VRChat worldでのruntime成功や現在のUnity Editor versionは、このREADMEだけからは完了扱いしません。
 
-## 前提環境
-- OS: Ubuntu 22.04 LTS（実用運用例、GUIのVCCはWindows正式対応、LinuxはVPM CLI運用が現実解）。[2][4]
-- Unity: 2022.3 LTS 系（Hub管理推奨、プロジェクトはSDK互換版を前提）。[5][4]
-- パッケージ: VRChat SDK3 Worlds、UdonSharp、ClientSim（VPMで導入）。[6][2]
-- VPM CLI: .NET 8 SDKが必要、vpm new/add/resolve等でプロジェクト管理・依存解決を実施する。[7][2]
+## Vision
 
-## クイックスタート（VPM CLI）
-- 概要: .NET 8 SDK→VPM CLI導入→テンプレ展開→新規プロジェクト作成→パッケージ追加→Unity Hub/Editorパス設定→Unityで開いてテストの順に進める。[2][7]
-- 代表コマンド:  
-  - dotnet tool install --global vrchat.vpm.cli（導入）[7]
-  - vpm install templates（テンプレ更新）[7]
-  - vpm new VirtualTokyoMatching World -p ~/projects（新規作成）[2]
-  - cd ~/projects/VirtualTokyoMatching && vpm check project . && vpm resolve project .（検証/解決）[2]
-  - vpm add package com.vrchat.worlds -p . && vpm add package com.vrchat.udonsharp -p . && vpm add package com.vrchat.clientsim -p .（追加）。[2]
-- Linuxの要点: settings.jsonにUnity Hub/Editorパスを手動記入し、vpm check hub/unityで認識させると安定する。[8][2]
+「相性の良い人を見つける」ために、利用者へプロフィールの過剰公開や長い入力完了を要求しない体験を作ります。
 
-## プロジェクト構成
-- Assets/VirtualTokyoMatching 配下に Scripts（機能別サブフォルダ）、ScriptableObjects、Prefabs、Scenes、Resources、Materials、Audio を整理する。[9][6]
-- 主要スクリプト群はAnalysis/Assessment/Core/Matching/Performance/Safety/Session/Sync/UI/Vector に分割管理する。[9][6]
+目指す状態は次です。
 
-## 設定アセット（ScriptableObject）
-- QuestionDatabase: 112問・5択・軸(0–29)・選択肢ウェイトのスキーマで作成する。[10][6]
-- VectorConfiguration: 112→30DのW行列、30→6DのP行列、軸名/ラベルを設定する。[10][6]
-- SummaryTemplates: 30軸の正負/中立の記述・タグ・見出しテンプレと閾値を設定する。[10][1]
-- PerformanceSettings: 計算予算、目標FPS、同期間隔、テクスチャ上限、ログ可視化等を設定する。[10][1]
+- 診断途中でも暫定推薦を見られる
+- 詳細回答は本人だけが保持する
+- 他人へ公開する情報は縮約・同意済みのものに限定する
+- 推薦から1on1会話へ自然に移動できる
+- 不安を感じた瞬間に非公開・退出・resetできる
 
-## シーン統合
-- 階層: Environment（Lobby/SessionRooms/Lighting/Audio）／Systems（VTMController/NetworkedProfiles/SpawnSystem/WorldSettings）／UI（Main/Assessment/Recommender/Safety）で構成する。[11][9]
-- VTMController 配下に各UdonBehaviourを配置し、Inspectorで依存参照とイベント配列（onDataLoaded/onQuestionAnswered/onVectorUpdated 等）を結線する。[11][9]
-- NetworkedProfiles は想定人数分用意し、PublicProfilePublisherごとにユニークなNetwork IDを割り当てる。[9][11]
+## Design philosophy
 
-## ビルドとパフォーマンス
-- 目標: PC≥72FPS/サイズ<200MB/全再計算≤5s、Quest≥60FPS/サイズ<100MB/全再計算≤10s を満たす。[4][1]
-- 最適化: ベイク照明、テクスチャ上限（PC:2048/Quest:1024）、モバイル系シェーダ、ミップ/ストリーミングを既定とする。[6][9]
-- テスト: エディタ複窓/ClientSimで同期・帯域・フレームを検証し、Friends+で1週間安定後にPublic化する運用とする。[6][1]
+- **Privacy before matching accuracy.** 112問回答と30軸をそのまま他者同期しない。
+- **Progress before completion.** 全質問完了を待たず、回答途中の暫定vectorで推薦を更新する。
+- **Consent before exposure.** 公開profileは明示同意時だけ同期し、OFF/退出時にclearできる設計にする。
+- **Recommendation is assistance, not truth.** cosine similarityを人間関係の断定として扱わない。
+- **Safety is always reachable.** emergency hide / exit / resetをmatching flowの外側へ追いやらない。
+- **Performance is a product constraint.** 推薦計算をevent-drivenにし、VRのframe budgetを守る。
+- **Repository evidence before completion claims.** scriptが存在することと、実worldで検証済みであることを分ける。
 
-## プライバシー/安全
-- 非公開データ: 112問回答と30軸はPlayerData（自分のみ）で保持し他者に公開しない。[1][4]
-- 公開データ: 6軸縮約＋タグ/見出し＋進捗％＋暫定フラグのみを同意時に同期し、OFFや退出で即時クリアする。[12][4]
-- 安全UI: 緊急非表示・退出・リセットを常時操作可能にし、公開OFF時は露出ゼロを保証する。[13][1]
+## Why / 差別化
 
-## 推薦/1on1設計
-- 類似度: 6軸同士のコサイン類似度で上位3件を算出し、進捗イベントで増分再計算する。[12][3]
-- 個室導線: 双方同意→個室割当→Teleport→15分タイマー→終了ベル→帰還、満室/同時招待は優先順位と再試行で解消する。[14][13]
+一般的なmatching体験では、詳しいprofileを公開するほど推薦材料が増えます。しかしVRChatでは、**会う前から詳細な回答を他人へ見せること自体が摩擦**になり得ます。
 
-## トラブルシューティング（VPM/Linux）
-- vpm add の用法: 必ず「vpm add package <ID>」の形式で、プロジェクト直下（Packages/manifest.jsonがある場所）で実行する。[15][8]
-- settings.json 破損時: バックアップ→再生成→vpm install templates→vpm list repos で復旧し、Hub/Editorパスを再設定する。[8][15]
-- 互換性エラー: パッケージ追加失敗時はテンプレ更新や resolve、対応バージョン選定で再試行する。[8][2]
+Virtual Tokyo Matching は、「どれだけ詳しく公開するか」ではなく、**どこまで情報を減らしても会話のきっかけを作れるか**を設計の中心に置きます。
 
-## 法令/ガイドライン
-- VRChatの利用規約・コミュニティガイドラインに準拠し、ソーシャル/デーティング系表現は年齢適合・同意掲示・撮影/配信注意の設計を守る。[13][1]
-- 外部API/DBや生データ公開、長文自由記述、在室外推薦等は採用せず、単一ワールド内完結と露出最小化を原則とする。[3][4]
+112問、30D、6D、UdonSharpは差別化そのものではありません。価値は、詳細回答を保持したまま公開情報を縮約し、途中参加・推薦・安全導線を一つのworld体験へ接続することです。
 
-## 今後の進め方
-- Resourcesに4種のScriptableObjectを最小構成で作成し、UI Prefabとシーン配線を完了させてローカル/ClientSimテストに進む。[9][2]
-- 目標性能を満たすまでPerfGuardとアセット予算を調整し、Friends+での安定確認後にPublicへ移行する。[6][1]
+## Current implementation
 
-## 参考（VPM CLIドキュメント）
-- vpmの導入/更新/テンプレ/新規作成/検証コマンドの詳細は公式ドキュメント・NuGetパッケージ説明に準拠する。[16][7]
+`Assets/VirtualTokyoMatching/` には少なくとも次の実装があります。
+
+```text
+Scripts/
+  Assessment/DiagnosisController.cs
+  Core/PlayerDataManager.cs
+  Vector/VectorBuilder.cs
+  Matching/CompatibilityCalculator.cs
+  Sync/PublicProfilePublisher.cs
+  UI/RecommenderUI.cs
+  Session/SessionRoomManager.cs
+  Safety/SafetyController.cs
+  Performance/PerfGuard.cs
+  Analysis/ValuesSummaryGenerator.cs
+  Editor/VTMSceneBuilder.cs
+  Editor/VTMVRChatValidator.cs
+  Testing/VTMSystemValidator.cs
+```
+
+ScriptableObject / template:
+
+- `QuestionDatabase`
+- `VectorConfiguration`
+- `SummaryTemplates`
+- `PerformanceSettings`
+
+Testsも `Assets/VirtualTokyoMatching/Tests/` に配置されています。
+
+## Experience flow
+
+```text
+112-question assessment
+  → personal 30D vector
+  → reduced 6D public representation
+  → compatibility calculation
+  → top recommendations
+  → mutual consent
+  → 1on1 session room
+
+at any point:
+  hide / unpublish / reset / exit
+```
+
+### Data boundary
+
+| data | visibility intent |
+|---|---|
+| raw 112 answers | self only |
+| 30D internal vector | self only |
+| reduced 6D vector | publish only with consent |
+| tags / short summary | publish only with consent |
+| progress / provisional state | minimal public state when enabled |
+
+Public profileをOFFにした場合、詳細回答を別経路で同期する設計にはしません。
+
+## Matching
+
+`CompatibilityCalculator.cs` がreduced vector間のsimilarityを計算し、`RecommenderUI.cs` が候補表示を担当します。
+
+推薦値は「人間として相性が良い」という真理値ではなく、**会話候補を絞るためのranking signal**として扱います。
+
+## 1on1 session
+
+`SessionRoomManager.cs` はmatching後のsession transitionを担います。
+
+設計上のflow:
+
+```text
+recommendation
+  → mutual consent
+  → room allocation
+  → teleport
+  → timed conversation
+  → return
+```
+
+満室・競合・cancelを通常stateとして扱い、相手との接触を強制しないことを前提にします。
+
+## Safety / privacy
+
+`SafetyController.cs` をmatching品質と同格のcore componentとして扱います。
+
+- emergency hide
+- profile unpublish
+- reset
+- exit
+- exposure minimization
+
+matching率を上げるためにprivacy boundaryを緩めることはDesign goalではありません。
+
+## Performance
+
+`PerfGuard.cs` とevent-driven updateにより、毎frame全員分を再計算する設計を避けます。
+
+PC / Questの具体的FPS・build-size目標はperformance targetとして扱い、**実機計測前に達成済みとは書きません**。
+
+## Environment truth boundary
+
+現在のrepositoryで確認できるpackage例:
+
+- `com.vrchat.base`: `3.5.2`
+- `com.vrchat.worlds`: `3.5.2`
+- `com.vrchat.udonsharp`: `1.1.8`
+
+`ProjectSettings/ProjectVersion.txt` は現在 `UnknownUnityVersion` です。そのためREADMEでは特定Unity versionをverified requirementとして固定しません。
+
+Unity / VRChat SDK compatibilityは、実際にEditorでprojectを開く時点のofficial compatibilityとproject stateを再確認してください。
+
+## Repository map
+
+```text
+Assets/VirtualTokyoMatching/
+  Scripts/             runtime / editor / validator
+  ScriptableObjects/   typed configuration
+  Resources/           configuration templates
+  Tests/               contract / behavior tests
+Packages/              Unity package manifest
+ProjectSettings/       project settings
+docs/                  design / operation notes
+web/                   supporting web assets
+```
+
+## What is verified vs not verified
+
+### Repository evidence exists
+
+- diagnosis / vector / matching source
+- safety / session / performance source
+- editor setup / validator source
+- ScriptableObject definitions
+- tests
+- VRChat SDK / UdonSharp package declarations
+
+### Not claimed by README without fresh runtime evidence
+
+- current public VRChat world deployment
+- successful VRChat Build & Test
+- Quest / PC runtime FPS targets achieved
+- current Unity Editor version
+- real-user matching effectiveness
+
+## Next verification boundary
+
+```text
+repository tests
+  → Unity project resolution
+  → Editor compilation
+  → scene build / validator
+  → ClientSim or multi-client behavior
+  → VRChat Build & Test
+  → controlled Friends+ observation
+```
+
+各段階を通る前に次の段階を「完了」と呼びません。
+
+## Done
+
+このprojectの成功は、質問数やmatching algorithmの複雑さでは測りません。
+
+**利用者が詳細な回答を公開しすぎず、途中でも相手候補を見つけ、安全に会話へ進むか撤退するかを自分で選べること**をDoneの中心に置きます。
