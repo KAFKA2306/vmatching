@@ -1,5 +1,7 @@
 # Virtual Tokyo Matching
 
+[![Deploy web to GitHub Pages](https://github.com/KAFKA2306/vmatching/actions/workflows/pages.yml/badge.svg)](https://github.com/KAFKA2306/vmatching/actions/workflows/pages.yml)
+
 **相性を探したい。でも、112問の回答そのものを他人へ公開したくはない。**
 
 Virtual Tokyo Matching は、VRChat内で性格診断を進めながら、**必要以上の個人情報を公開せずに「話してみたい相手」へ到達する**ことを目指すmatching systemです。
